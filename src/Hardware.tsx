@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { CpuIcon, WifiIcon, ThermometerIcon, DatabaseIcon, MonitorIcon, ZapIcon } from "lucide-react";
-import { Badge } from "../assets/badge.tsx";
+import { Badge } from "../src/ui/badge.tsx";
+import './index.css';
 
 const components = [
   {
@@ -61,110 +62,95 @@ const components = [
 
 export default function Hardware() {
   return (
-    <section id="hardware" className="py-24 px-6 relative">
-      <div className="absolute inset-0 bg-secondary/30" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_50%,oklch(0.65_0.28_285/0.04),transparent)]" />
+    <section id="hardware" className="hardware-section">
+  {/* Fondo */}
+  <div className="hardware-bg"></div>
 
-      <div className="relative max-w-6xl mx-auto">
-        {/* Header */}
+  <div className="hardware-container">
+    
+    {/* Header */}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.6 }}
+      className="hardware-header"
+    >
+      <span className="hardware-subtitle">
+        <span className="line" />
+        Componentes
+        <span className="line" />
+      </span>
+
+      <h2 className="hardware-title">
+        Hardware del <span className="gradient-text">sistema</span>
+      </h2>
+
+      <p className="hardware-description">
+        Conoce los componentes electrónicos y tecnologías que hacen
+        posible nuestro proyecto IoT.
+      </p>
+    </motion.div>
+
+    {/* Grid */}
+    <div className="hardware-grid">
+      {components.map((comp, i) => (
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          key={comp.name}
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-16"
+          transition={{ delay: i * 0.08, duration: 0.5 }}
+          className="hardware-card"
         >
-          <span className="inline-flex items-center gap-2 text-primary text-sm font-semibold uppercase tracking-widest mb-4">
-            <span className="w-6 h-px bg-primary" />
-            Componentes
-            <span className="w-6 h-px bg-primary" />
-          </span>
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-balance mb-4">
-            Hardware del{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">
-              sistema
-            </span>
-          </h2>
-          <p className="text-muted-foreground max-w-xl mx-auto">
-            Conoce los componentes electrónicos y tecnologías que hacen
-            posible nuestro proyecto IoT.
-          </p>
-        </motion.div>
+          <div className="card-glow"></div>
 
-        {/* Cards grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {components.map((comp, i) => (
-            <motion.div
-              key={comp.name}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.08, duration: 0.5 }}
-              className="group relative p-6 rounded-xl border border-border bg-card hover:border-primary/30 transition-all duration-300 overflow-hidden"
-            >
-              {/* Hover glow */}
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[radial-gradient(circle_at_50%_0%,oklch(0.72_0.22_195/0.06),transparent_60%)]" />
+          <div className="hardware-icon">
+            <comp.icon />
+          </div>
 
-              <div
-                className={`relative w-12 h-12 rounded-xl border ${comp.bg} flex items-center justify-center mb-5`}
-              >
-                <comp.icon className={`w-5 h-5 ${comp.color}`} />
-              </div>
+          <div>
+            <h3 className="hardware-card-title">{comp.name}</h3>
+            <p className="hardware-model">{comp.model}</p>
+            <p className="hardware-text">{comp.description}</p>
 
-              <div className="relative">
-                <div className="flex items-start justify-between gap-2 mb-1">
-                  <h3 className="font-semibold text-foreground">{comp.name}</h3>
-                </div>
-                <p className="text-xs text-primary font-mono mb-3">{comp.model}</p>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-                  {comp.description}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {comp.tags.map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant="secondary"
-                      className="text-xs font-medium px-2 py-0.5"
-                    >
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Architecture diagram hint */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.4, duration: 0.6 }}
-          className="mt-12 p-6 rounded-xl border border-dashed border-border bg-card/50 text-center"
-        >
-          <p className="text-sm text-muted-foreground">
-            <span className="text-primary font-medium">Arquitectura del sistema:</span>{" "}
-            Sensores → Microcontrolador → Módulo Wi-Fi → Cloud → Dashboard
-          </p>
-          <div className="flex items-center justify-center gap-2 mt-4 flex-wrap">
-            {["Sensores", "→", "MCU", "→", "Wi-Fi", "→", "Cloud", "→", "Dashboard"].map(
-              (item, i) => (
-                <span
-                  key={i}
-                  className={
-                    item === "→"
-                      ? "text-muted-foreground"
-                      : "px-3 py-1 rounded-full text-xs font-medium bg-primary/10 border border-primary/20 text-primary"
-                  }
-                >
-                  {item}
+            <div className="hardware-tags">
+              {comp.tags.map((tag) => (
+                <span key={tag} className="tag">
+                  {tag}
                 </span>
-              )
-            )}
+              ))}
+            </div>
           </div>
         </motion.div>
+      ))}
+    </div>
+
+    {/* Arquitectura */}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: 0.4, duration: 0.6 }}
+      className="hardware-architecture"
+    >
+      <p>
+        <span className="highlight">Arquitectura del sistema:</span>{" "}
+        Sensores → MCU → Wi-Fi → Cloud → Dashboard
+      </p>
+
+      <div className="architecture-flow">
+        {["Sensores", "→", "MCU", "→", "Wi-Fi", "→", "Cloud", "→", "Dashboard"].map(
+          (item, i) => (
+            <span key={i} className={item === "→" ? "arrow" : "bubble"}>
+              {item}
+            </span>
+          )
+        )}
       </div>
-    </section>
+    </motion.div>
+
+  </div>
+</section>
   );
 }

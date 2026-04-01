@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useInView } from "framer-motion";
 import { useRef } from "react";
+import './index.css';
 import {
   LightbulbIcon,
   TargetIcon,
@@ -68,49 +69,52 @@ export default function About() {
   const isInView = useInView(ref, { once: true });
 
   return (
-    <section id="about" className="py-24 px-6 relative">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_50%_0%,oklch(0.72_0.22_195/0.04),transparent)]" />
-      <div className="max-w-6xl mx-auto">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
-          {/* Left: text */}
-          <div ref={ref}>
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={isInView ? { opacity: 1, x: 0 } : {}}
-              transition={{ duration: 0.6 }}
-            >
-              <span className="inline-flex items-center gap-2 text-primary text-sm font-semibold uppercase tracking-widest mb-4">
-                <span className="w-6 h-px bg-primary" />
-                Sobre el proyecto
-              </span>
-              <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-balance mb-6">
-                ¿Qué es{" "}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">
-                  nuestro proyecto?
-                </span>
-              </h2>
-              <p className="text-muted-foreground leading-relaxed mb-6">
-                Somos un equipo de estudiantes desarrollando una solución IoT
-                innovadora como parte de nuestro proyecto TIC. Integramos
-                sensores, microcontroladores y plataformas en la nube para crear
-                un sistema de monitoreo y automatización inteligente.
-              </p>
-              <p className="text-muted-foreground leading-relaxed">
-                Nuestro objetivo es demostrar cómo la tecnología puede resolver
-                problemas cotidianos de manera eficiente, conectando el mundo
-                físico con el digital a través de datos y automatización.
-              </p>
-            </motion.div>
-          </div>
+    <section id="about" className="about-section">
+  <div className="about-bg" />
 
-          {/* Right: feature cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {features.map((feat, i) => (
-              <FeatureCard key={feat.title} {...feat} index={i} />
-            ))}
-          </div>
-        </div>
+  <div className="about-container">
+    <div className="about-grid">
+      
+      {/* LEFT */}
+      <div ref={ref}>
+        <motion.div
+          initial={{ opacity: 0, x: -30 }}
+          animate={isInView ? { opacity: 1, x: 0 } : {}}
+          transition={{ duration: 0.7 }}
+        >
+          <span className="about-badge">
+            <span className="line" />
+            Sobre el proyecto
+          </span>
+
+          <h2 className="about-title">
+            ¿Qué es{" "}
+            <span className="gradient-text">
+              nuestro proyecto?
+            </span>
+          </h2>
+
+          <p className="about-text">
+            Somos un equipo de estudiantes desarrollando una solución IoT
+            innovadora como parte de nuestro proyecto TIC...
+          </p>
+
+          <p className="about-text">
+            Nuestro objetivo es demostrar cómo la tecnología puede resolver
+            problemas cotidianos...
+          </p>
+        </motion.div>
       </div>
-    </section>
+
+      {/* RIGHT */}
+      <div className="about-cards">
+        {features.map((feat, i) => (
+          <FeatureCard key={feat.title} {...feat} index={i} />
+        ))}
+      </div>
+
+    </div>
+  </div>
+</section>
   );
 }
