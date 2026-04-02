@@ -90,7 +90,7 @@ npm run dev
 Luego abre en tu navegador:
 
 ```
-http://localhost:5173
+http://localhost:xxxx
 ```
 
 ---
