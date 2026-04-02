@@ -1,16 +1,156 @@
-# React + Vite
+# 🚀 Proyecto TIC — Plataforma IoT
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## 📌 Descripción
 
-Currently, two official plugins are available:
+Este proyecto consiste en el desarrollo de una plataforma web moderna junto a un sistema IoT para el monitoreo de datos en tiempo real.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+La aplicación permite visualizar información proveniente de sensores, enfocándose en soluciones como el control de temperatura en transporte (cadena de frío).
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🧠 Tecnologías utilizadas
 
-## Expanding the ESLint configuration
+### 💻 Frontend
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+* React
+* Vite
+* JavaScript / TypeScript
+* CSS (custom + Tailwind opcional)
+
+### 🔌 Hardware
+
+* ESP32
+* Sensores (temperatura, etc.)
+* Conectividad WiFi
+
+---
+
+## 📁 Estructura del proyecto
+
+```bash
+PROYECTO_TIC/
+│
+├── public/
+│   ├── favicon.svg
+│   └── icons.svg
+│
+├── src/
+│   ├── assets/
+│   │   ├── hero.png
+│   │   ├── react.svg
+│   │   └── vite.svg
+│   │
+│   ├── ui/
+│   │
+│   ├── About.tsx
+│   ├── App.css
+│   ├── App.jsx
+│   ├── Contact.tsx
+│   ├── document.jsx
+│   ├── Footer.tsx
+│   ├── Hardware.tsx
+│   ├── Hero.tsx
+│   ├── index.css
+│   ├── index.tsx
+│   ├── main.jsx
+│   └── Navbar.tsx
+│
+├── .gitignore
+├── eslint.config.js
+├── index.html
+├── package.json
+├── package-lock.json
+├── README.md
+└── vite.config.js
+```
+
+---
+
+## ⚙️ Instalación y uso
+
+### 1. Clonar el repositorio
+
+```bash
+git clone https://github.com/tu-usuario/proyecto-tic.git
+cd proyecto-tic
+```
+
+### 2. Instalar dependencias
+
+```bash
+npm install
+```
+
+### 3. Ejecutar el proyecto
+
+```bash
+npm run dev
+```
+
+Luego abre en tu navegador:
+
+```
+http://localhost:5173
+```
+
+---
+
+## 🧩 Funcionalidades
+
+* 🌐 Página web moderna con React
+* 📡 Integración con sensores IoT
+* 📊 Visualización de datos
+* 🎨 Diseño responsive y animaciones
+* 📑 Sección de documentación interna
+* 📞 Sección de contacto
+
+---
+
+## 🧪 Secciones del sitio
+
+* 🏠 Hero (Inicio)
+* 📖 About (Descripción del proyecto)
+* ⚙️ Hardware
+* 📑 Documentación
+* 📬 Contacto
+* 🔻 Footer
+
+---
+
+## 🔧 Scripts disponibles
+
+```bash
+npm run dev     # Ejecuta el servidor de desarrollo
+npm run build   # Compila para producción
+npm run preview # Previsualiza el build
+```
+
+---
+
+## 🚀 Mejoras futuras
+
+* 📱 Aplicación móvil
+* ☁️ Backend con Node.js o Firebase
+* 🔔 Notificaciones en tiempo real
+* 📈 Dashboard con gráficos
+* 🔐 Autenticación de usuarios
+
+---
+
+## 👨‍💻 Equipo
+
+Proyecto desarrollado como parte de la asignatura TIC.
+
+---
+
+## 📄 Licencia
+
+Uso académico.
+
+---
+
+## ⭐ Repositorio
+
+Si te gusta el proyecto, no olvides darle ⭐ en GitHub.
+
+---
