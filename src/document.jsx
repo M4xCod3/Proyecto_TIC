@@ -1,56 +1,64 @@
 import React from 'react';
-import './Document.css'
+import './index.css';
 
-const Document = () => {
+
+export default function Document() {
     return (
-        <><header>
-            <h1><a id="ct-button">Documentacion</a></h1>
-            <nav>
-                <ul>
-                    <li></li>
-                </ul>
-            </nav>
-        </header>
-        <main>
-        <h1>Conoce al equipo detras del proyecto "" </h1>
-        <section id="ETP">
-            <h2>sobre el proyecto</h2>
+        <section id="document" className="document-section">
+  
+  {/* BACKGROUND */}
+  <div className="document-bg" />
 
-            <p>
-                Este proyecto conto de varias etapas, tales como:
-            </p>
-            <ul>
-                <li>lluvia de ideas</li>
-                <li>interpretacion de la idea</li>
-                <li>Pre entrenamiento de la IA</li>
-                <li>Implementacion</li>
-                <li>Contrucion</li>
-                <li>Pruebas</li>
-            </ul>
-        </section>
-        <section id="ind-ETP">
-            <h2 id="LLD">
+  <div className="document-container">
 
-            </h2>
-            <h2 id="IDI">
+    {/* SIDEBAR */}
+    <aside className="document-sidebar">
+      <h2>Documentación</h2>
 
-            </h2>
-            <h2 id="PIA">
+      <ul>
+        <li><a href="#ETP">Etapas del proyecto</a></li>
+        <li><a href="#LLD">Lluvia de ideas</a></li>
+        <li><a href="#IDI">Interpretación de la idea</a></li>
+        <li><a href="#IMP">Implementación</a></li>
+        <li><a href="#Cont">Construcción</a></li>
+        <li><a href="#PB">Pruebas</a></li>
+      </ul>
+    </aside>
 
-            </h2>
-            <h2 id="IMP">
+    {/* CONTENT */}
+    <div className="document-content">
+      <section id="ETP">
+        <h3>Etapas del proyecto</h3>
+        <p>Aquí puedes explicar las etapas...</p>
+      </section>
 
-            </h2>
-            <h2 id="Cont">
+      <section id="LLD">
+        <h3>Lluvia de ideas</h3>
+        <p>Ideas iniciales del proyecto...</p>
+      </section>
 
-            </h2>
-            <h2 id="PB">
-            
-            </h2>
-        </section>
-        </main>
-        </>
+      <section id="IDI">
+        <h3>Interpretación de la idea</h3>
+        <p>Cómo definieron la solución...</p>
+      </section>
+
+      <section id="IMP">
+        <h3>Implementación</h3>
+        <p>Cómo lo desarrollaron...</p>
+      </section>
+
+      <section id="Cont">
+        <h3>Construcción</h3>
+        <p>Parte física o técnica...</p>
+      </section>
+
+      <section id="PB">
+        <h3>Pruebas</h3>
+        <p>Resultados y validación...</p>
+      </section>
+    </div>
+
+  </div>
+</section>
     );
 }
-
-export default Document;

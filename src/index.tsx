@@ -6,6 +6,7 @@ import About from './About';
 import Hardware from './Hardware';
 import Contact from './Contact';
 import Footer from './Footer';
+import Document from './document';
 import './index.css'; // Asegúrate de que este archivo existe para Tailwind
 
 export default function Index() {
@@ -18,9 +19,15 @@ export default function Index() {
             <a href="#inicio">Inicio</a>
             <a href="#about">Proyecto</a>
             <a href="#hardware">Hardware</a>
+            <a href="document">Documentacion</a>
             <a href="#contact">Contacto</a>
           </div>
-          <button className="btn-contacto">Contáctanos</button>
+          <button className="btn-contacto" onClick={() => {
+            const el = document.querySelector("#contact");
+            if (el) el.scrollIntoView({ behavior: "smooth" });
+          }}>
+            Contáctanos
+          </button>
         </div>
 
         <div className="hero-content" id="inicio">
@@ -49,6 +56,10 @@ export default function Index() {
 
       <div id="hardware">
         <Hardware />
+      </div>
+
+      <div id="document"> 
+        <Document />
       </div>
 
       <div id="contact">

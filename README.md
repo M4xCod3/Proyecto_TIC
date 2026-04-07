@@ -152,5 +152,3 @@ Uso académico.
 ## ⭐ Repositorio
 
 Si te gusta el proyecto, no olvides darle ⭐ en GitHub.
-
----

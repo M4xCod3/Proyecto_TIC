@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { CpuIcon, WifiIcon, ThermometerIcon, DatabaseIcon, MonitorIcon, ZapIcon } from "lucide-react";
-import { Badge } from "../src/ui/badge.tsx";
+import { Badge } from   "../src/ui/badge.tsx";
 import './index.css';
 
 const components = [
@@ -83,7 +83,7 @@ export default function Hardware() {
       </span>
 
       <h2 className="hardware-title">
-        Hardware del <span className="gradient-text">sistema</span>
+        Hardware del sistema <span className="gradient-text"></span>
       </h2>
 
       <p className="hardware-description">
@@ -138,16 +138,6 @@ export default function Hardware() {
         <span className="highlight">Arquitectura del sistema:</span>{" "}
         Sensores → MCU → Wi-Fi → Cloud → Dashboard
       </p>
-
-      <div className="architecture-flow">
-        {["Sensores", "→", "MCU", "→", "Wi-Fi", "→", "Cloud", "→", "Dashboard"].map(
-          (item, i) => (
-            <span key={i} className={item === "→" ? "arrow" : "bubble"}>
-              {item}
-            </span>
-          )
-        )}
-      </div>
     </motion.div>
 
   </div>
