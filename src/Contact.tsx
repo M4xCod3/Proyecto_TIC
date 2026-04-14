@@ -16,7 +16,7 @@ type FormState = {
 };
 
 const socialLinks = [
-  { icon: GitBranchIcon, label: "GitHub", href: "https://github.com" },
+  { icon: GitBranchIcon, label: "GitHub", href: "https://github.com/M4xCod3/Proyecto_TIC.git" },
   { icon: MailIcon, label: "Email", href: "mailto:proyecto@ejemplo.com" },
 ];
 
