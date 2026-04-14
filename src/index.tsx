@@ -7,7 +7,7 @@ import Hardware from './Hardware';
 import Contact from './Contact';
 import Footer from './Footer';
 import Document from './document';
-import './index.css'; // Asegúrate de que este archivo existe para Tailwind
+import './index.css'; 
 
 export default function Index() {
   return (
