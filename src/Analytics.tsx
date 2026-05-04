@@ -96,10 +96,20 @@ type ConnectionStatus = "connecting" | "connected" | "disconnected" | "no_data" 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 
+// Debug: Log environment variable status (not the values)
+console.log("[v0] Supabase config - URL exists:", !!SUPABASE_URL, "Key exists:", !!SUPABASE_ANON_KEY);
+
 let supabase: SupabaseClient | null = null;
 
 if (SUPABASE_URL && SUPABASE_ANON_KEY) {
-  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  try {
+    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log("[v0] Supabase client created successfully");
+  } catch (err) {
+    console.error("[v0] Failed to create Supabase client:", err);
+  }
+} else {
+  console.log("[v0] Supabase not configured, will use demo mode");
 }
 
 // Simulated data generator for demo mode
@@ -355,34 +365,46 @@ export default function Analytics() {
     let channel: RealtimeChannel | null = null;
 
     const initializeData = async () => {
+      console.log("[v0] initializeData called, supabase exists:", !!supabase);
+      
       if (!supabase) {
+        console.log("[v0] No Supabase client, entering demo mode");
         setConnectionStatus("demo");
         setHasData(true);
         return;
       }
 
       setConnectionStatus("connecting");
+      console.log("[v0] Connecting to Supabase...");
 
       try {
+        console.log("[v0] Fetching data from pedidos_monitoreo...");
         const { data, error } = await supabase
           .from("pedidos_monitoreo")
           .select("*")
           .order("created_at", { ascending: false })
           .limit(50);
 
+        console.log("[v0] Query result - error:", error, "data count:", data?.length || 0);
+
         if (error) {
+          console.error("[v0] Supabase query error:", error.message);
           setConnectionStatus("no_data");
           setHasData(false);
           return;
         }
 
         if (!data || data.length === 0) {
+          console.log("[v0] No data found in pedidos_monitoreo");
           setConnectionStatus("no_data");
           setHasData(false);
           return;
         }
 
+        console.log("[v0] Data loaded successfully, setting up realtime...");
         setConnectionStatus("connected");
+        setHasData(true);
+        
         const reversedData = [...data].reverse();
         reversedData.forEach((item: PedidoMonitoreo) => {
           processData(mapPedidoToTelemetry(item));
@@ -394,16 +416,19 @@ export default function Analytics() {
             "postgres_changes",
             { event: "INSERT", schema: "public", table: "pedidos_monitoreo" },
             (payload) => {
+              console.log("[v0] New realtime data received");
               processData(mapPedidoToTelemetry(payload.new as PedidoMonitoreo));
             }
           )
           .subscribe((status) => {
+            console.log("[v0] Realtime subscription status:", status);
             if (status === "SUBSCRIBED") {
               setConnectionStatus("connected");
             }
           });
 
-      } catch {
+      } catch (err) {
+        console.error("[v0] Exception during initialization:", err);
         setConnectionStatus("no_data");
         setHasData(false);
       }
@@ -501,7 +526,7 @@ export default function Analytics() {
 
   const statusDisplay = getConnectionStatusDisplay();
 
-  // Loading State - While connecting
+  // Loading State - While connecting (with debug info)
   if (connectionStatus === "connecting" && hasData === null) {
     return (
       <div className="min-h-screen bg-[#020617] text-white flex items-center justify-center">
@@ -539,6 +564,12 @@ export default function Analytics() {
           <p className="text-gray-400 mb-6 leading-relaxed">
             Estableciendo conexion con la base de datos de telemetria.
           </p>
+
+          {/* Debug info */}
+          <div className="mt-4 text-xs text-gray-500 bg-white/5 rounded p-2">
+            <p>Supabase configurado: {supabase ? "Si" : "No"}</p>
+            <p>URL env: {SUPABASE_URL ? "Presente" : "No configurada"}</p>
+          </div>
         </motion.div>
       </div>
     );
