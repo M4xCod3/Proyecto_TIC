@@ -28,35 +28,17 @@ import {
   RefreshCwIcon,
   DatabaseIcon,
   WifiIcon,
+  WifiOffIcon,
+  PackageXIcon,
 } from "lucide-react";
+import { createClient, SupabaseClient, RealtimeChannel } from "@supabase/supabase-js";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Button } from "./ui/button";
 import "./index.css";
 
-/**
- * DATA SOURCE INTEGRATION
- * 
- * This component is prepared to receive real-time data from:
- * 1. Supabase Realtime subscriptions
- * 2. WebSocket connections
- * 3. Server-Sent Events (SSE)
- * 4. Manual JSON input (TIMESTAMP;LAT;LON;TEMP;HUM;ALERTA format)
- * 
- * To connect to Supabase, uncomment and configure:
- * 
- * import { createClient } from '@supabase/supabase-js'
- * const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
- * 
- * Then in useEffect:
- * const subscription = supabase
- *   .channel('telemetry')
- *   .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'telemetry' }, 
- *       payload => processData(payload.new as TelemetryData))
- *   .subscribe()
- */
-
 // Types
 interface TelemetryData {
+  id?: number;
   timestamp: string;
   lat: number;
   lon: number;
@@ -79,11 +61,23 @@ interface AIInsight {
   timestamp: string;
 }
 
-// Simulated data generator for demo
+type ConnectionStatus = "connecting" | "connected" | "disconnected" | "no_data" | "demo";
+
+// Supabase client initialization
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+
+let supabase: SupabaseClient | null = null;
+
+if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
+// Simulated data generator for demo mode
 const generateTelemetryData = (): TelemetryData => {
   const now = new Date();
-  const baseTemp = 4 + Math.random() * 3; // Cold chain: 4-7C
-  const baseHum = 85 + Math.random() * 10; // 85-95% humidity
+  const baseTemp = 4 + Math.random() * 3;
+  const baseHum = 85 + Math.random() * 10;
   const hasAlert = Math.random() > 0.85;
   
   return {
@@ -121,6 +115,8 @@ export default function Analytics() {
   const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
   const [isStreaming, setIsStreaming] = useState(true);
   const [dataInput, setDataInput] = useState("");
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("connecting");
+  const [hasData, setHasData] = useState<boolean | null>(null);
 
   // AI Analysis function
   const analyzeData = useCallback((data: TelemetryData): AIInsight => {
@@ -174,6 +170,7 @@ export default function Analytics() {
   // Process new data point
   const processData = useCallback((data: TelemetryData) => {
     setCurrentData(data);
+    setHasData(true);
     
     const time = new Date(data.timestamp);
     const timeStr = time.toLocaleTimeString("es-CL", { 
@@ -190,16 +187,100 @@ export default function Analytics() {
         fullTime: data.timestamp,
       };
       const updated = [...prev, newPoint];
-      return updated.slice(-20); // Keep last 20 points
+      return updated.slice(-20);
     });
 
     const insight = analyzeData(data);
     setAiInsights(prev => [insight, ...prev].slice(0, 10));
   }, [analyzeData]);
 
-  // Simulated streaming
+  // Fetch initial data and setup realtime subscription
   useEffect(() => {
-    if (!isStreaming) return;
+    let channel: RealtimeChannel | null = null;
+    let demoInterval: ReturnType<typeof setInterval> | null = null;
+
+    const initializeData = async () => {
+      // If Supabase is not configured, run in demo mode
+      if (!supabase) {
+        console.log("[v0] Supabase not configured, running in demo mode");
+        setConnectionStatus("demo");
+        setHasData(true);
+        return;
+      }
+
+      setConnectionStatus("connecting");
+
+      try {
+        // Fetch initial data from telemetry table
+        const { data, error } = await supabase
+          .from("telemetry")
+          .select("*")
+          .order("timestamp", { ascending: false })
+          .limit(20);
+
+        if (error) {
+          console.log("[v0] Supabase error:", error.message);
+          // If table doesn't exist or other error, show no data
+          setConnectionStatus("no_data");
+          setHasData(false);
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          console.log("[v0] No data found in telemetry table");
+          setConnectionStatus("no_data");
+          setHasData(false);
+          return;
+        }
+
+        // Process historical data
+        setConnectionStatus("connected");
+        const reversedData = [...data].reverse();
+        reversedData.forEach((item: TelemetryData) => {
+          processData(item);
+        });
+
+        // Setup realtime subscription
+        channel = supabase
+          .channel("telemetry_realtime")
+          .on(
+            "postgres_changes",
+            { event: "INSERT", schema: "public", table: "telemetry" },
+            (payload) => {
+              console.log("[v0] New telemetry data received:", payload.new);
+              processData(payload.new as TelemetryData);
+            }
+          )
+          .subscribe((status) => {
+            console.log("[v0] Realtime subscription status:", status);
+            if (status === "SUBSCRIBED") {
+              setConnectionStatus("connected");
+            }
+          });
+
+      } catch (err) {
+        console.log("[v0] Error initializing Supabase:", err);
+        setConnectionStatus("no_data");
+        setHasData(false);
+      }
+    };
+
+    initializeData();
+
+    // Cleanup
+    return () => {
+      if (channel) {
+        supabase?.removeChannel(channel);
+      }
+      if (demoInterval) {
+        clearInterval(demoInterval);
+      }
+    };
+  }, [processData]);
+
+  // Demo mode streaming
+  useEffect(() => {
+    if (connectionStatus !== "demo" || !isStreaming) return;
 
     const interval = setInterval(() => {
       const newData = generateTelemetryData();
@@ -207,7 +288,7 @@ export default function Analytics() {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [isStreaming, processData]);
+  }, [connectionStatus, isStreaming, processData]);
 
   // Handle manual data input
   const handleDataInput = () => {
@@ -241,6 +322,119 @@ export default function Analytics() {
       default: return "border-cyan-500/30 bg-cyan-500/5";
     }
   };
+
+  const getConnectionStatusDisplay = () => {
+    switch (connectionStatus) {
+      case "connecting":
+        return {
+          icon: <WifiIcon className="w-3 h-3 animate-pulse" />,
+          text: "Conectando...",
+          className: "bg-blue-500/10 border-blue-500/30 text-blue-400"
+        };
+      case "connected":
+        return {
+          icon: <WifiIcon className="w-3 h-3" />,
+          text: "Supabase",
+          className: "bg-green-500/10 border-green-500/30 text-green-400"
+        };
+      case "disconnected":
+        return {
+          icon: <WifiOffIcon className="w-3 h-3" />,
+          text: "Desconectado",
+          className: "bg-red-500/10 border-red-500/30 text-red-400"
+        };
+      case "no_data":
+        return {
+          icon: <PackageXIcon className="w-3 h-3" />,
+          text: "Sin datos",
+          className: "bg-orange-500/10 border-orange-500/30 text-orange-400"
+        };
+      case "demo":
+      default:
+        return {
+          icon: <DatabaseIcon className="w-3 h-3" />,
+          text: "Demo",
+          className: "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
+        };
+    }
+  };
+
+  const statusDisplay = getConnectionStatusDisplay();
+
+  // No Data State - "Pedido no existente"
+  if (connectionStatus === "no_data" || (hasData === false && connectionStatus !== "demo")) {
+    return (
+      <div className="min-h-screen bg-[#020617] text-white flex items-center justify-center">
+        {/* Background Effects */}
+        <div className="fixed inset-0 pointer-events-none">
+          <div
+            className="absolute inset-0 opacity-[0.03]"
+            style={{
+              backgroundImage: `
+                linear-gradient(rgba(0,200,255,0.3) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,200,255,0.3) 1px, transparent 1px)
+              `,
+              backgroundSize: "40px 40px",
+            }}
+          />
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative z-10 text-center max-w-md mx-auto px-6"
+        >
+          <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center">
+            <PackageXIcon className="w-12 h-12 text-orange-400" />
+          </div>
+          
+          <h1 className="text-3xl font-bold mb-4 text-white">
+            Pedido no existente
+          </h1>
+          
+          <p className="text-gray-400 mb-6 leading-relaxed">
+            No se encontraron datos de telemetria en la base de datos. 
+            Verifica que la tabla <code className="text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded">telemetry</code> exista 
+            y contenga registros.
+          </p>
+
+          <div className="bg-white/5 border border-white/10 rounded-lg p-4 mb-6 text-left">
+            <p className="text-sm text-gray-400 mb-2">Estructura esperada de la tabla:</p>
+            <code className="text-xs text-cyan-300 block whitespace-pre-wrap">
+{`CREATE TABLE telemetry (
+  id SERIAL PRIMARY KEY,
+  timestamp TIMESTAMPTZ,
+  lat DECIMAL,
+  lon DECIMAL,
+  temp DECIMAL,
+  hum DECIMAL,
+  alerta TEXT
+);`}
+            </code>
+          </div>
+
+          <div className="flex gap-3 justify-center">
+            <Button
+              variant="secondary"
+              onClick={handleScrollToHome}
+              className="gap-2 bg-white/5 border border-white/10 hover:bg-white/10"
+            >
+              <ArrowLeftIcon className="w-4 h-4" />
+              Volver al inicio
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => window.location.reload()}
+              className="gap-2 bg-cyan-500/10 border border-cyan-500/30 hover:bg-cyan-500/20 text-cyan-400"
+            >
+              <RefreshCwIcon className="w-4 h-4" />
+              Reintentar
+            </Button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#020617] text-white">
@@ -284,9 +478,9 @@ export default function Analytics() {
 
           <div className="flex items-center gap-3">
             {/* Data Source Indicator */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm bg-yellow-500/10 border border-yellow-500/30 text-yellow-400">
-              <DatabaseIcon className="w-3 h-3" />
-              Demo
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border ${statusDisplay.className}`}>
+              {statusDisplay.icon}
+              {statusDisplay.text}
             </div>
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${
               isStreaming 
@@ -296,186 +490,190 @@ export default function Analytics() {
               <span className={`w-2 h-2 rounded-full ${isStreaming ? "bg-green-400 animate-pulse" : "bg-gray-400"}`} />
               {isStreaming ? "En vivo" : "Pausado"}
             </div>
-            <Button
-              variant="secondary"
-              onClick={() => setIsStreaming(!isStreaming)}
-              className="gap-2 bg-white/5 border border-white/10 hover:bg-white/10"
-            >
-              {isStreaming ? <PauseIcon className="w-4 h-4" /> : <PlayIcon className="w-4 h-4" />}
-              {isStreaming ? "Pausar" : "Reanudar"}
-            </Button>
+            {connectionStatus === "demo" && (
+              <Button
+                variant="secondary"
+                onClick={() => setIsStreaming(!isStreaming)}
+                className="gap-2 bg-white/5 border border-white/10 hover:bg-white/10"
+              >
+                {isStreaming ? <PauseIcon className="w-4 h-4" /> : <PlayIcon className="w-4 h-4" />}
+                {isStreaming ? "Pausar" : "Reanudar"}
+              </Button>
+            )}
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="relative z-10 max-w-7xl mx-auto px-6 py-8">
-        {/* Page Title */}
+        {/* Title Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-3xl font-bold mb-2">
-            Analisis de Datos en{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
-              Tiempo Real
-            </span>
+          <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-white via-cyan-200 to-blue-300 bg-clip-text text-transparent">
+            Analisis de Datos en Tiempo Real
           </h1>
           <p className="text-gray-400">
-            Monitor de telemetria del sistema Log-Cold para transporte refrigerado
+            Monitoreo de telemetria para cadena de frio - Sistema Log-Cold
           </p>
         </motion.div>
 
-        {/* Stats Cards */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
-        >
-          <Card className="border-cyan-500/20 hover:border-cyan-500/40 transition-colors">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-sm">Temperatura</p>
-                  <p className="text-2xl font-bold text-cyan-400">
-                    {currentData?.temp.toFixed(1) ?? "--"}°C
-                  </p>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center">
-                  <ThermometerIcon className="w-6 h-6 text-cyan-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-blue-500/20 hover:border-blue-500/40 transition-colors">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-sm">Humedad</p>
-                  <p className="text-2xl font-bold text-blue-400">
-                    {currentData?.hum.toFixed(1) ?? "--"}%
-                  </p>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center">
-                  <DropletIcon className="w-6 h-6 text-blue-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-green-500/20 hover:border-green-500/40 transition-colors">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-sm">Estado</p>
-                  <p className={`text-lg font-bold ${
-                    currentData?.alerta === "OK" ? "text-green-400" : "text-red-400"
-                  }`}>
-                    {currentData?.alerta ?? "--"}
-                  </p>
-                </div>
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                  currentData?.alerta === "OK" 
-                    ? "bg-green-500/10 border border-green-500/30" 
-                    : "bg-red-500/10 border border-red-500/30"
-                }`}>
-                  {currentData?.alerta === "OK" 
-                    ? <CheckCircle2Icon className="w-6 h-6 text-green-400" />
-                    : <AlertTriangleIcon className="w-6 h-6 text-red-400" />
-                  }
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-purple-500/20 hover:border-purple-500/40 transition-colors">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-sm">Lecturas</p>
-                  <p className="text-2xl font-bold text-purple-400">
-                    {telemetryHistory.length}
-                  </p>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center">
-                  <ActivityIcon className="w-6 h-6 text-purple-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Charts Section */}
+          {/* Left Column - Charts & GPS */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+              >
+                <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+                        <ThermometerIcon className="w-5 h-5 text-cyan-400" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400">Temperatura</p>
+                        <p className="text-xl font-bold text-white">
+                          {currentData?.temp.toFixed(1) || "--"}°C
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                        <DropletIcon className="w-5 h-5 text-blue-400" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400">Humedad</p>
+                        <p className="text-xl font-bold text-white">
+                          {currentData?.hum.toFixed(1) || "--"}%
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                        <SatelliteIcon className="w-5 h-5 text-green-400" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400">GPS Status</p>
+                        <p className="text-xl font-bold text-green-400">Activo</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                <Card className={`bg-white/5 border-white/10 backdrop-blur-sm ${
+                  currentData?.alerta !== "OK" ? "border-red-500/50" : ""
+                }`}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        currentData?.alerta !== "OK" 
+                          ? "bg-red-500/20" 
+                          : "bg-green-500/20"
+                      }`}>
+                        {currentData?.alerta !== "OK" 
+                          ? <AlertTriangleIcon className="w-5 h-5 text-red-400" />
+                          : <CheckCircle2Icon className="w-5 h-5 text-green-400" />
+                        }
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400">Estado</p>
+                        <p className={`text-xl font-bold ${
+                          currentData?.alerta !== "OK" ? "text-red-400" : "text-green-400"
+                        }`}>
+                          {currentData?.alerta || "--"}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </div>
+
             {/* Temperature Chart */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
+              transition={{ delay: 0.5 }}
             >
-              <Card>
+              <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center">
-                        <ThermometerIcon className="w-5 h-5 text-cyan-400" />
-                      </div>
-                      <div>
-                        <CardTitle>Temperatura</CardTitle>
-                        <CardDescription>Monitoreo en tiempo real (°C)</CardDescription>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-400">
-                      <ClockIcon className="w-4 h-4" />
-                      Ultimos 20 registros
-                    </div>
-                  </div>
+                  <CardTitle className="flex items-center gap-2 text-white">
+                    <ThermometerIcon className="w-5 h-5 text-cyan-400" />
+                    Temperatura en Tiempo Real
+                  </CardTitle>
+                  <CardDescription className="text-gray-400">
+                    Monitoreo de temperatura de la cadena de frio (°C)
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-64">
+                  <div className="h-[250px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={telemetryHistory}>
                         <defs>
                           <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
+                            <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
                         <XAxis 
                           dataKey="time" 
-                          stroke="#64748b" 
-                          fontSize={12}
-                          tickLine={false}
+                          stroke="rgba(255,255,255,0.5)"
+                          tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }}
                         />
                         <YAxis 
-                          stroke="#64748b" 
-                          fontSize={12}
-                          tickLine={false}
                           domain={[0, 10]}
+                          stroke="rgba(255,255,255,0.5)"
+                          tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }}
                         />
                         <Tooltip
                           contentStyle={{
-                            backgroundColor: "#0f172a",
-                            border: "1px solid rgba(34, 211, 238, 0.3)",
-                            borderRadius: "8px",
-                            color: "#fff",
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            border: '1px solid rgba(6,182,212,0.3)',
+                            borderRadius: '8px',
+                            color: '#fff'
                           }}
-                          labelStyle={{ color: "#94a3b8" }}
                         />
                         <Area
                           type="monotone"
                           dataKey="temp"
-                          stroke="#22d3ee"
+                          stroke="#06b6d4"
                           strokeWidth={2}
                           fill="url(#tempGradient)"
-                          dot={false}
-                          activeDot={{ r: 4, fill: "#22d3ee" }}
                         />
                       </AreaChart>
                     </ResponsiveContainer>
@@ -488,47 +686,40 @@ export default function Analytics() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
+              transition={{ delay: 0.6 }}
             >
-              <Card>
+              <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/30 flex items-center justify-center">
-                        <DropletIcon className="w-5 h-5 text-blue-400" />
-                      </div>
-                      <div>
-                        <CardTitle>Humedad</CardTitle>
-                        <CardDescription>Porcentaje de humedad relativa</CardDescription>
-                      </div>
-                    </div>
-                  </div>
+                  <CardTitle className="flex items-center gap-2 text-white">
+                    <DropletIcon className="w-5 h-5 text-blue-400" />
+                    Humedad Relativa
+                  </CardTitle>
+                  <CardDescription className="text-gray-400">
+                    Nivel de humedad del contenedor (%)
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-64">
+                  <div className="h-[200px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={telemetryHistory}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
                         <XAxis 
                           dataKey="time" 
-                          stroke="#64748b" 
-                          fontSize={12}
-                          tickLine={false}
+                          stroke="rgba(255,255,255,0.5)"
+                          tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }}
                         />
                         <YAxis 
-                          stroke="#64748b" 
-                          fontSize={12}
-                          tickLine={false}
                           domain={[70, 100]}
+                          stroke="rgba(255,255,255,0.5)"
+                          tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }}
                         />
                         <Tooltip
                           contentStyle={{
-                            backgroundColor: "#0f172a",
-                            border: "1px solid rgba(59, 130, 246, 0.3)",
-                            borderRadius: "8px",
-                            color: "#fff",
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            border: '1px solid rgba(59,130,246,0.3)',
+                            borderRadius: '8px',
+                            color: '#fff'
                           }}
-                          labelStyle={{ color: "#94a3b8" }}
                         />
                         <Line
                           type="monotone"
@@ -536,7 +727,6 @@ export default function Analytics() {
                           stroke="#3b82f6"
                           strokeWidth={2}
                           dot={false}
-                          activeDot={{ r: 4, fill: "#3b82f6" }}
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -549,73 +739,79 @@ export default function Analytics() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
+              transition={{ delay: 0.7 }}
             >
-              <Card>
+              <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
                 <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-green-500/10 border border-green-500/30 flex items-center justify-center">
-                      <MapPinIcon className="w-5 h-5 text-green-400" />
-                    </div>
-                    <div>
-                      <CardTitle>Monitor GPS</CardTitle>
-                      <CardDescription>Posicion del vehiculo de transporte</CardDescription>
-                    </div>
-                  </div>
+                  <CardTitle className="flex items-center gap-2 text-white">
+                    <MapPinIcon className="w-5 h-5 text-green-400" />
+                    Monitor GPS
+                  </CardTitle>
+                  <CardDescription className="text-gray-400">
+                    Ubicacion en tiempo real del vehiculo
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="relative h-48 rounded-lg overflow-hidden border border-white/10 bg-[#0a1628]">
-                    {/* Stylized Map Placeholder */}
+                  <div className="relative bg-black/40 rounded-lg border border-white/10 p-6 overflow-hidden">
+                    {/* Map Grid Background */}
                     <div
                       className="absolute inset-0 opacity-20"
                       style={{
                         backgroundImage: `
-                          linear-gradient(rgba(34, 211, 238, 0.3) 1px, transparent 1px),
-                          linear-gradient(90deg, rgba(34, 211, 238, 0.3) 1px, transparent 1px)
+                          linear-gradient(rgba(0,255,100,0.3) 1px, transparent 1px),
+                          linear-gradient(90deg, rgba(0,255,100,0.3) 1px, transparent 1px)
                         `,
-                        backgroundSize: "30px 30px",
+                        backgroundSize: "20px 20px",
                       }}
                     />
                     
-                    {/* GPS Coordinates Display */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="relative">
-                          <motion.div
-                            animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.2, 0.5] }}
-                            transition={{ duration: 2, repeat: Infinity }}
-                            className="absolute inset-0 w-16 h-16 mx-auto rounded-full bg-green-400/20"
-                            style={{ transform: "translate(-50%, -50%)", left: "50%", top: "50%" }}
-                          />
-                          <motion.div
-                            animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0.1, 0.3] }}
-                            transition={{ duration: 2, repeat: Infinity, delay: 0.3 }}
-                            className="absolute inset-0 w-24 h-24 mx-auto rounded-full bg-green-400/10"
-                            style={{ transform: "translate(-50%, -50%)", left: "50%", top: "50%" }}
-                          />
-                          <div className="relative w-4 h-4 mx-auto rounded-full bg-green-400 shadow-lg shadow-green-400/50" />
+                    <div className="relative flex items-center justify-between">
+                      <div className="space-y-4">
+                        <div>
+                          <p className="text-xs text-gray-400 mb-1">Latitud</p>
+                          <p className="text-2xl font-mono text-green-400">
+                            {currentData?.lat.toFixed(6) || "--.------"}
+                          </p>
                         </div>
-                        
-                        <div className="mt-6 space-y-2">
-                          <div className="flex items-center justify-center gap-4">
-                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
-                              <SatelliteIcon className="w-4 h-4 text-green-400" />
-                              <span className="text-sm font-mono">
-                                LAT: {currentData?.lat.toFixed(6) ?? "--.------"}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
-                              <SatelliteIcon className="w-4 h-4 text-blue-400" />
-                              <span className="text-sm font-mono">
-                                LON: {currentData?.lon.toFixed(6) ?? "--.------"}
-                              </span>
-                            </div>
-                          </div>
-                          <p className="text-xs text-gray-500">
-                            Santiago, Chile - Region Metropolitana
+                        <div>
+                          <p className="text-xs text-gray-400 mb-1">Longitud</p>
+                          <p className="text-2xl font-mono text-green-400">
+                            {currentData?.lon.toFixed(6) || "--.------"}
                           </p>
                         </div>
                       </div>
+
+                      {/* Animated Position Indicator */}
+                      <div className="relative w-32 h-32">
+                        <div className="absolute inset-0 rounded-full border border-green-500/30" />
+                        <div className="absolute inset-4 rounded-full border border-green-500/40" />
+                        <div className="absolute inset-8 rounded-full border border-green-500/50" />
+                        <motion.div
+                          className="absolute inset-0 flex items-center justify-center"
+                          animate={{ scale: [1, 1.1, 1] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        >
+                          <div className="w-4 h-4 rounded-full bg-green-400 shadow-lg shadow-green-400/50" />
+                        </motion.div>
+                        {/* Pulse effect */}
+                        <motion.div
+                          className="absolute inset-0 flex items-center justify-center"
+                          initial={{ scale: 0.8, opacity: 1 }}
+                          animate={{ scale: 2, opacity: 0 }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        >
+                          <div className="w-4 h-4 rounded-full bg-green-400/50" />
+                        </motion.div>
+                      </div>
+                    </div>
+
+                    {/* Timestamp */}
+                    <div className="relative mt-4 pt-4 border-t border-white/10 flex items-center gap-2 text-sm text-gray-400">
+                      <ClockIcon className="w-4 h-4" />
+                      Ultima actualizacion: {currentData?.timestamp 
+                        ? new Date(currentData.timestamp).toLocaleString("es-CL")
+                        : "--"
+                      }
                     </div>
                   </div>
                 </CardContent>
@@ -623,131 +819,133 @@ export default function Analytics() {
             </motion.div>
           </div>
 
-          {/* AI Insights Sidebar */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-            className="space-y-6"
-          >
-            <Card className="border-purple-500/20">
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-center justify-center">
+          {/* Right Column - AI Insights & Data Input */}
+          <div className="space-y-6">
+            {/* AI Insights Panel */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.8 }}
+            >
+              <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-white">
                     <BrainCircuitIcon className="w-5 h-5 text-purple-400" />
-                  </div>
-                  <div>
-                    <CardTitle>IA Insights</CardTitle>
-                    <CardDescription>Analisis inteligente de la carga</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3 max-h-[500px] overflow-y-auto">
-                <AnimatePresence mode="popLayout">
-                  {aiInsights.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <BrainCircuitIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">Esperando datos...</p>
-                    </div>
-                  ) : (
-                    aiInsights.map((insight) => (
-                      <motion.div
-                        key={insight.id}
-                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className={`p-3 rounded-lg border ${getInsightBg(insight.type)}`}
-                      >
-                        <div className="flex items-start gap-2">
-                          {getInsightIcon(insight.type)}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-gray-300 leading-relaxed">
-                              {insight.message}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {insight.timestamp}
-                            </p>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))
-                  )}
-                </AnimatePresence>
-              </CardContent>
-            </Card>
-
-            {/* Data Input Card */}
-            <Card className="border-white/10">
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/20 flex items-center justify-center">
-                    <RefreshCwIcon className="w-5 h-5 text-gray-400" />
-                  </div>
-                  <div>
-                    <CardTitle>Entrada Manual</CardTitle>
-                    <CardDescription>Formato: TIMESTAMP;LAT;LON;TEMP;HUM;ALERTA</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <textarea
-                    value={dataInput}
-                    onChange={(e) => setDataInput(e.target.value)}
-                    placeholder="2024-01-15T10:30:00;-33.4489;-70.6693;5.2;88.5;OK"
-                    className="w-full h-24 px-3 py-2 text-sm font-mono bg-black/40 border border-white/10 rounded-lg text-gray-300 placeholder:text-gray-600 focus:outline-none focus:border-cyan-500/50 resize-none"
-                  />
-                  <Button
-                    onClick={handleDataInput}
-                    className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:opacity-90"
-                  >
-                    Procesar Datos
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Current Reading Details */}
-            {currentData && (
-              <Card className="border-white/10">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">Ultima Lectura</CardTitle>
+                    IA Insights
+                  </CardTitle>
+                  <CardDescription className="text-gray-400">
+                    Analisis inteligente de telemetria
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2 text-sm font-mono">
+                  <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+                    <AnimatePresence mode="popLayout">
+                      {aiInsights.length === 0 ? (
+                        <div className="text-center py-8 text-gray-400">
+                          <BrainCircuitIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">Esperando datos...</p>
+                        </div>
+                      ) : (
+                        aiInsights.map((insight) => (
+                          <motion.div
+                            key={insight.id}
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, x: -10 }}
+                            className={`p-3 rounded-lg border ${getInsightBg(insight.type)}`}
+                          >
+                            <div className="flex items-start gap-2">
+                              {getInsightIcon(insight.type)}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-white leading-relaxed">
+                                  {insight.message}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {insight.timestamp}
+                                </p>
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Manual Data Input */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.9 }}
+            >
+              <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-white">
+                    <ActivityIcon className="w-5 h-5 text-cyan-400" />
+                    Entrada Manual
+                  </CardTitle>
+                  <CardDescription className="text-gray-400">
+                    Formato: TIMESTAMP;LAT;LON;TEMP;HUM;ALERTA
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <textarea
+                      value={dataInput}
+                      onChange={(e) => setDataInput(e.target.value)}
+                      placeholder="2024-01-15T10:30:00Z;-33.4489;-70.6693;4.5;88.2;OK"
+                      className="w-full h-24 bg-black/40 border border-white/10 rounded-lg p-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-cyan-500/50 resize-none font-mono"
+                    />
+                    <Button
+                      onClick={handleDataInput}
+                      className="w-full bg-cyan-500/20 border border-cyan-500/40 hover:bg-cyan-500/30 text-cyan-400"
+                    >
+                      <RefreshCwIcon className="w-4 h-4 mr-2" />
+                      Procesar Datos
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Connection Info */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 1 }}
+            >
+              <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-white text-sm">
+                    <DatabaseIcon className="w-4 h-4 text-gray-400" />
+                    Estado de Conexion
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Timestamp:</span>
-                      <span className="text-gray-300">
-                        {new Date(currentData.timestamp).toLocaleTimeString("es-CL")}
+                      <span className="text-gray-400">Fuente:</span>
+                      <span className={connectionStatus === "connected" ? "text-green-400" : "text-yellow-400"}>
+                        {connectionStatus === "connected" ? "Supabase Realtime" : "Modo Demo"}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Latitud:</span>
-                      <span className="text-gray-300">{currentData.lat.toFixed(6)}</span>
+                      <span className="text-gray-400">Puntos:</span>
+                      <span className="text-white">{telemetryHistory.length}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Longitud:</span>
-                      <span className="text-gray-300">{currentData.lon.toFixed(6)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Temperatura:</span>
-                      <span className="text-cyan-400">{currentData.temp}°C</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Humedad:</span>
-                      <span className="text-blue-400">{currentData.hum}%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Estado:</span>
-                      <span className={currentData.alerta === "OK" ? "text-green-400" : "text-red-400"}>
-                        {currentData.alerta}
+                      <span className="text-gray-400">Alertas:</span>
+                      <span className="text-white">
+                        {aiInsights.filter(i => i.type === "error").length}
                       </span>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            )}
-          </motion.div>
+            </motion.div>
+          </div>
         </div>
       </main>
     </div>
