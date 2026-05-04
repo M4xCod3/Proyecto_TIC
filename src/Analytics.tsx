@@ -26,10 +26,34 @@ import {
   PlayIcon,
   PauseIcon,
   RefreshCwIcon,
+  DatabaseIcon,
+  WifiIcon,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Button } from "./ui/button";
 import "./index.css";
+
+/**
+ * DATA SOURCE INTEGRATION
+ * 
+ * This component is prepared to receive real-time data from:
+ * 1. Supabase Realtime subscriptions
+ * 2. WebSocket connections
+ * 3. Server-Sent Events (SSE)
+ * 4. Manual JSON input (TIMESTAMP;LAT;LON;TEMP;HUM;ALERTA format)
+ * 
+ * To connect to Supabase, uncomment and configure:
+ * 
+ * import { createClient } from '@supabase/supabase-js'
+ * const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+ * 
+ * Then in useEffect:
+ * const subscription = supabase
+ *   .channel('telemetry')
+ *   .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'telemetry' }, 
+ *       payload => processData(payload.new as TelemetryData))
+ *   .subscribe()
+ */
 
 // Types
 interface TelemetryData {
@@ -259,6 +283,11 @@ export default function Analytics() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Data Source Indicator */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm bg-yellow-500/10 border border-yellow-500/30 text-yellow-400">
+              <DatabaseIcon className="w-3 h-3" />
+              Demo
+            </div>
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${
               isStreaming 
                 ? "bg-green-500/10 border border-green-500/30 text-green-400" 

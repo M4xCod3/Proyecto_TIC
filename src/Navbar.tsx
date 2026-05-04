@@ -9,7 +9,7 @@ const navLinks = [
   { label: "Proyecto", href: "#about" },
   { label: "Hardware", href: "#hardware" },
   { label: "Documento", href: "document"},
-  { label: "Analytics", href: "#analytics" },
+  { label: "Analytics", href: "/analytics.html", external: true },
   { label: "Contacto", href: "#contact" },
 ];
 
@@ -23,8 +23,12 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleNav = (href: string) => {
+  const handleNav = (href: string, external?: boolean) => {
     setMenuOpen(false);
+    if (external || href.startsWith('/')) {
+      window.location.href = href;
+      return;
+    }
     const el = document.querySelector(href);
     if (el) el.scrollIntoView({ behavior: "smooth" });
   };
@@ -59,7 +63,7 @@ export default function Navbar() {
           {navLinks.map((link) => (
             <button
               key={link.href}
-              onClick={() => handleNav(link.href)}
+              onClick={() => handleNav(link.href, (link as { external?: boolean }).external)}
               className="text-sm text-muted-foreground hover:text-primary transition-colors font-medium tracking-wide"
             >
               {link.label}
@@ -96,7 +100,7 @@ export default function Navbar() {
               {navLinks.map((link) => (
                 <button
                   key={link.href}
-                  onClick={() => handleNav(link.href)}
+                  onClick={() => handleNav(link.href, (link as { external?: boolean }).external)}
                   className="text-left text-muted-foreground hover:text-primary transition-colors font-medium py-1"
                 >
                   {link.label}
