@@ -29,40 +29,15 @@ import {
   PauseIcon,
   RefreshCwIcon,
   DatabaseIcon,
-  WifiIcon,
   WifiOffIcon,
   PackageXIcon,
   Volume2Icon,
   VolumeXIcon,
-  ZoomInIcon,
-  ZoomOutIcon,
-  MaximizeIcon,
 } from "lucide-react";
 import { createClient, SupabaseClient, RealtimeChannel } from "@supabase/supabase-js";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Button } from "./ui/button";
 import "./index.css";
-
-// Fix Leaflet default marker icon
-delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-});
-
-// Custom marker icon
-const customIcon = new L.Icon({
-  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
 
 // Types - Mapped to pedidos_monitoreo table structure
 interface PedidoMonitoreo {
@@ -265,16 +240,7 @@ const AnimatedGauge = ({
   );
 };
 
-// Map component that follows marker
-const MapFollower = ({ position }: { position: [number, number] }) => {
-  const map = useMap();
-  
-  useEffect(() => {
-    map.flyTo(position, map.getZoom(), { duration: 1 });
-  }, [map, position]);
-  
-  return null;
-};
+
 
 export default function Analytics() {
   const [telemetryHistory, setTelemetryHistory] = useState<ChartDataPoint[]>([]);
@@ -286,7 +252,6 @@ export default function Analytics() {
   const [hasData, setHasData] = useState<boolean | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isNewData, setIsNewData] = useState(false);
-  const [mapZoom, setMapZoom] = useState(14);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Initialize audio
@@ -653,10 +618,6 @@ export default function Analytics() {
     );
   }
 
-  const mapPosition: [number, number] = currentData 
-    ? [currentData.lat, currentData.lon] 
-    : [-33.4489, -70.6693];
-
   return (
     <div className="min-h-screen bg-[#020617] text-white">
       {/* Background Effects */}
@@ -1015,102 +976,106 @@ export default function Analytics() {
                         Monitor GPS Interactivo
                       </CardTitle>
                       <CardDescription className="text-gray-400">
-                        Ubicacion en tiempo real del vehiculo - Mapa interactivo
+                        Ubicacion en tiempo real del vehiculo
                       </CardDescription>
-                    </div>
-                    <div className="flex gap-2 items-center">
-                      <div className="flex gap-1">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => setMapZoom(z => Math.min(z + 1, 18))}
-                          className="bg-white/5 border border-white/10 hover:bg-white/10"
-                        >
-                          <ZoomInIcon className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => setMapZoom(z => Math.max(z - 1, 5))}
-                          className="bg-white/5 border border-white/10 hover:bg-white/10"
-                        >
-                          <ZoomOutIcon className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => setMapZoom(14)}
-                          className="bg-white/5 border border-white/10 hover:bg-white/10"
-                        >
-                          <MaximizeIcon className="w-4 h-4" />
-                        </Button>
-                      </div>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="h-[350px] relative">
-                    <MapContainer
-                      center={mapPosition}
-                      zoom={mapZoom}
-                      style={{ height: "100%", width: "100%" }}
-                      className="rounded-b-lg"
-                    >
-                      <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                      />
-                      <MapFollower position={mapPosition} />
-                      <Marker position={mapPosition} icon={customIcon}>
-                        <Popup>
-                          <div className="text-black">
-                            <strong>Log-Cold Tracker</strong><br />
-                            Lat: {currentData?.lat.toFixed(6)}<br />
-                            Lon: {currentData?.lon.toFixed(6)}<br />
-                            Temp: {currentData?.temp}°C<br />
-                            Estado: {currentData?.alerta}
-                          </div>
-                        </Popup>
-                      </Marker>
-                    </MapContainer>
+                  <div className="h-[350px] relative rounded-b-lg overflow-hidden bg-slate-900">
+                    {/* Stylized Map Background */}
+                    <div 
+                      className="absolute inset-0 opacity-30"
+                      style={{
+                        backgroundImage: `
+                          linear-gradient(rgba(0,200,255,0.2) 1px, transparent 1px),
+                          linear-gradient(90deg, rgba(0,200,255,0.2) 1px, transparent 1px)
+                        `,
+                        backgroundSize: "30px 30px",
+                      }}
+                    />
                     
-                    {/* Coordinates Overlay */}
-                    <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm rounded-lg p-3 border border-white/10 z-[1000]">
-                      <div className="flex gap-4 text-sm">
+                    {/* Radar Animation */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <motion.div
+                        className="absolute w-64 h-64 border border-cyan-500/30 rounded-full"
+                        animate={{ scale: [1, 2, 1], opacity: [0.5, 0, 0.5] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "easeOut" }}
+                      />
+                      <motion.div
+                        className="absolute w-48 h-48 border border-cyan-500/40 rounded-full"
+                        animate={{ scale: [1, 1.8, 1], opacity: [0.6, 0, 0.6] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "easeOut", delay: 0.5 }}
+                      />
+                      <motion.div
+                        className="absolute w-32 h-32 border border-cyan-500/50 rounded-full"
+                        animate={{ scale: [1, 1.6, 1], opacity: [0.7, 0, 0.7] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "easeOut", delay: 1 }}
+                      />
+                      
+                      {/* Center Marker */}
+                      <motion.div 
+                        className="relative z-10"
+                        animate={isNewData ? { scale: [1, 1.3, 1] } : {}}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <div className="w-6 h-6 bg-green-500 rounded-full shadow-lg shadow-green-500/50 flex items-center justify-center">
+                          <div className="w-3 h-3 bg-white rounded-full" />
+                        </div>
+                        <motion.div
+                          className="absolute inset-0 w-6 h-6 bg-green-400 rounded-full"
+                          animate={{ scale: [1, 2], opacity: [0.5, 0] }}
+                          transition={{ duration: 1.5, repeat: Infinity }}
+                        />
+                      </motion.div>
+                    </div>
+                    
+                    {/* Coordinates Display */}
+                    <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm rounded-lg p-4 border border-white/10">
+                      <div className="grid grid-cols-2 gap-6">
                         <div>
-                          <p className="text-xs text-gray-400">Latitud</p>
+                          <p className="text-xs text-gray-400 mb-1">Latitud</p>
                           <motion.p 
-                            className="font-mono text-green-400"
+                            className="font-mono text-lg text-green-400"
                             key={currentData?.lat}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
                           >
                             {currentData?.lat.toFixed(6) || "--.------"}
                           </motion.p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-400">Longitud</p>
+                          <p className="text-xs text-gray-400 mb-1">Longitud</p>
                           <motion.p 
-                            className="font-mono text-green-400"
+                            className="font-mono text-lg text-green-400"
                             key={currentData?.lon}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
                           >
                             {currentData?.lon.toFixed(6) || "--.------"}
                           </motion.p>
                         </div>
                       </div>
                     </div>
-
-                    {/* Live indicator */}
-                    <div className="absolute top-4 right-4 bg-black/80 backdrop-blur-sm rounded-full px-3 py-1 border border-white/10 z-[1000] flex items-center gap-2">
-                      <motion.span 
-                        className="w-2 h-2 rounded-full bg-green-400"
-                        animate={{ scale: [1, 1.3, 1], opacity: [1, 0.7, 1] }}
-                        transition={{ duration: 1.5, repeat: Infinity }}
-                      />
-                      <span className="text-xs text-green-400">En vivo</span>
+                    
+                    {/* Status Badge */}
+                    <div className="absolute top-4 right-4 flex items-center gap-2">
+                      <div className="bg-black/80 backdrop-blur-sm rounded-full px-3 py-1.5 border border-white/10 flex items-center gap-2">
+                        <motion.span 
+                          className="w-2 h-2 rounded-full bg-green-400"
+                          animate={{ scale: [1, 1.3, 1], opacity: [1, 0.7, 1] }}
+                          transition={{ duration: 1.5, repeat: Infinity }}
+                        />
+                        <span className="text-xs text-green-400 font-medium">GPS Activo</span>
+                      </div>
                     </div>
+                    
+                    {/* Hardware ID */}
+                    {currentData?.hardware_id && (
+                      <div className="absolute top-4 left-4 bg-black/80 backdrop-blur-sm rounded-lg px-3 py-1.5 border border-cyan-500/30">
+                        <span className="text-xs text-cyan-400 font-mono">{currentData.hardware_id}</span>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
