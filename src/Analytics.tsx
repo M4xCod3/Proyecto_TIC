@@ -29,6 +29,7 @@ import {
   PauseIcon,
   RefreshCwIcon,
   DatabaseIcon,
+  WifiIcon,
   WifiOffIcon,
   PackageXIcon,
   Volume2Icon,
