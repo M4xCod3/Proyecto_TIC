@@ -71,7 +71,7 @@ PROYECTO_TIC/
 ### 1. Clonar el repositorio
 
 ```bash
-git clone https://github.com/tu-usuario/proyecto-tic.git
+git clone https://github.com/M4xCod3/proyecto-tic.git
 cd proyecto-tic
 ```
 
