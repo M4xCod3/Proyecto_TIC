@@ -535,8 +535,51 @@ export default function Analytics() {
 
   const statusDisplay = getConnectionStatusDisplay();
 
-  // No Data State - "Pedido no existente"
-  if (connectionStatus === "no_data" || (hasData === false && connectionStatus !== "demo")) {
+  // Loading State - While connecting
+  if (connectionStatus === "connecting" && hasData === null) {
+    return (
+      <div className="min-h-screen bg-[#020617] text-white flex items-center justify-center">
+        <div className="fixed inset-0 pointer-events-none">
+          <div
+            className="absolute inset-0 opacity-[0.03]"
+            style={{
+              backgroundImage: `
+                linear-gradient(rgba(0,200,255,0.3) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,200,255,0.3) 1px, transparent 1px)
+              `,
+              backgroundSize: "40px 40px",
+            }}
+          />
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative z-10 text-center max-w-md mx-auto px-6"
+        >
+          <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            >
+              <RefreshCwIcon className="w-12 h-12 text-cyan-400" />
+            </motion.div>
+          </div>
+          
+          <h1 className="text-3xl font-bold mb-4 text-white">
+            Conectando...
+          </h1>
+          
+          <p className="text-gray-400 mb-6 leading-relaxed">
+            Estableciendo conexion con la base de datos de telemetria.
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // No Data State - "Sin datos en tiempo real"
+  if (connectionStatus === "no_data" || hasData === false) {
     return (
       <div className="min-h-screen bg-[#020617] text-white flex items-center justify-center">
         <div className="fixed inset-0 pointer-events-none">
@@ -562,7 +605,7 @@ export default function Analytics() {
           </div>
           
           <h1 className="text-3xl font-bold mb-4 text-white">
-            Pedido no existente
+            Sin datos en tiempo real
           </h1>
           
           <p className="text-gray-400 mb-6 leading-relaxed">
