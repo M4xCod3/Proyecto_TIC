@@ -7,6 +7,7 @@ import Hardware from './Hardware';
 import Contact from './Contact';
 import Footer from './Footer';
 import Document from './document';
+
 import './index.css'; 
 
 export default function Index() {
@@ -20,6 +21,7 @@ export default function Index() {
             <a href="#about">Proyecto</a>
             <a href="#hardware">Hardware</a>
             <a href="document">Documentacion</a>
+            <a href="/analytics.html">Analytics</a>
             <a href="#contact">Contacto</a>
           </div>
           <button className="btn-contacto" onClick={() => {
