@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LineChart,
@@ -10,6 +10,8 @@ import {
   ResponsiveContainer,
   Area,
   AreaChart,
+  Brush,
+  ReferenceLine,
 } from "recharts";
 import {
   ThermometerIcon,
@@ -30,11 +32,37 @@ import {
   WifiIcon,
   WifiOffIcon,
   PackageXIcon,
+  Volume2Icon,
+  VolumeXIcon,
+  ZoomInIcon,
+  ZoomOutIcon,
+  MaximizeIcon,
 } from "lucide-react";
 import { createClient, SupabaseClient, RealtimeChannel } from "@supabase/supabase-js";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Button } from "./ui/button";
 import "./index.css";
+
+// Fix Leaflet default marker icon
+delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+});
+
+// Custom marker icon
+const customIcon = new L.Icon({
+  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
 
 // Types - Mapped to pedidos_monitoreo table structure
 interface PedidoMonitoreo {
@@ -134,6 +162,120 @@ const parseDataString = (dataString: string): TelemetryData | null => {
   }
 };
 
+// Animated Gauge Component
+const AnimatedGauge = ({ 
+  value, 
+  maxValue, 
+  label, 
+  unit, 
+  color, 
+  warningThreshold,
+  dangerThreshold,
+  icon: Icon,
+  isNew 
+}: { 
+  value: number; 
+  maxValue: number; 
+  label: string; 
+  unit: string; 
+  color: string;
+  warningThreshold?: number;
+  dangerThreshold?: number;
+  icon: React.ElementType;
+  isNew: boolean;
+}) => {
+  const percentage = Math.min((value / maxValue) * 100, 100);
+  const circumference = 2 * Math.PI * 45;
+  const strokeDashoffset = circumference - (percentage / 100) * circumference * 0.75;
+  
+  // Determine color based on thresholds
+  let gaugeColor = color;
+  if (dangerThreshold && value > dangerThreshold) {
+    gaugeColor = "#ef4444";
+  } else if (warningThreshold && value > warningThreshold) {
+    gaugeColor = "#f59e0b";
+  }
+
+  return (
+    <motion.div 
+      className="relative flex flex-col items-center"
+      animate={isNew ? { scale: [1, 1.05, 1] } : {}}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="relative w-32 h-32">
+        {/* Background arc */}
+        <svg className="w-full h-full transform -rotate-[135deg]" viewBox="0 0 100 100">
+          <circle
+            cx="50"
+            cy="50"
+            r="45"
+            fill="none"
+            stroke="rgba(255,255,255,0.1)"
+            strokeWidth="8"
+            strokeDasharray={`${circumference * 0.75} ${circumference * 0.25}`}
+            strokeLinecap="round"
+          />
+          <motion.circle
+            cx="50"
+            cy="50"
+            r="45"
+            fill="none"
+            stroke={gaugeColor}
+            strokeWidth="8"
+            strokeDasharray={circumference}
+            initial={{ strokeDashoffset: circumference }}
+            animate={{ strokeDashoffset }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            strokeLinecap="round"
+            style={{ filter: `drop-shadow(0 0 6px ${gaugeColor})` }}
+          />
+        </svg>
+        
+        {/* Center content */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <Icon className="w-5 h-5 mb-1" style={{ color: gaugeColor }} />
+          <motion.span 
+            className="text-2xl font-bold text-white"
+            key={value}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            {value.toFixed(1)}
+          </motion.span>
+          <span className="text-xs text-gray-400">{unit}</span>
+        </div>
+        
+        {/* Pulse effect when new data */}
+        <AnimatePresence>
+          {isNew && (
+            <motion.div
+              className="absolute inset-0 rounded-full border-2"
+              style={{ borderColor: gaugeColor }}
+              initial={{ scale: 0.8, opacity: 1 }}
+              animate={{ scale: 1.3, opacity: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.6 }}
+            />
+          )}
+        </AnimatePresence>
+      </div>
+      <p className="text-sm text-gray-400 mt-2">{label}</p>
+    </motion.div>
+  );
+};
+
+// Map component that follows marker
+const MapFollower = ({ position }: { position: [number, number] }) => {
+  const map = useMap();
+  
+  useEffect(() => {
+    map.flyTo(position, map.getZoom(), { duration: 1 });
+  }, [map, position]);
+  
+  return null;
+};
+
 export default function Analytics() {
   const [telemetryHistory, setTelemetryHistory] = useState<ChartDataPoint[]>([]);
   const [currentData, setCurrentData] = useState<TelemetryData | null>(null);
@@ -142,6 +284,24 @@ export default function Analytics() {
   const [dataInput, setDataInput] = useState("");
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("connecting");
   const [hasData, setHasData] = useState<boolean | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [isNewData, setIsNewData] = useState(false);
+  const [mapZoom, setMapZoom] = useState(14);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Initialize audio
+  useEffect(() => {
+    audioRef.current = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2Onp2ci3xvbnt+jZ+fnpN8bG96hJWgnpmLfHBzfoaSmJWNgHZ1e4KLk5WRin9zdnmAh4+RjoV7d3d6gIeNj4uEfHl4e4GGi4yJg316eXt/hImKiIN9enl7f4SIiYaAfHp5e3+Dh4iGgX15eXp+goaHhIF8eXl6foKFhoSAfHl5en6ChoWDf3x5eXp+goWFg398eXl6foKFhYN/fHl5en6ChYWDf3x5eXp+goWFg398eXl6foKFhYN/fHl5en6ChYWDf3x5eXp+goWFg398eXl6fn+FhYN/fHl5en5/hYWDf3x5eXp+f4WFg398eXl6fn+FhYN/fA==");
+    audioRef.current.volume = 0.3;
+  }, []);
+
+  // Play alert sound
+  const playAlertSound = useCallback(() => {
+    if (soundEnabled && audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(() => {});
+    }
+  }, [soundEnabled]);
 
   // AI Analysis function
   const analyzeData = useCallback((data: TelemetryData): AIInsight => {
@@ -149,6 +309,7 @@ export default function Analytics() {
     const timestamp = new Date().toLocaleTimeString("es-CL");
 
     if (data.alerta !== "OK") {
+      playAlertSound();
       return {
         id,
         type: "error",
@@ -158,6 +319,7 @@ export default function Analytics() {
     }
 
     if (data.temp > 6) {
+      playAlertSound();
       return {
         id,
         type: "warning",
@@ -167,6 +329,7 @@ export default function Analytics() {
     }
 
     if (data.temp < 2) {
+      playAlertSound();
       return {
         id,
         type: "warning",
@@ -190,12 +353,14 @@ export default function Analytics() {
       message: `Estado de la Carga: OK. Temp: ${data.temp}C, Hum: ${data.hum}%. Condiciones optimas.`,
       timestamp,
     };
-  }, []);
+  }, [playAlertSound]);
 
   // Process new data point
   const processData = useCallback((data: TelemetryData) => {
     setCurrentData(data);
     setHasData(true);
+    setIsNewData(true);
+    setTimeout(() => setIsNewData(false), 500);
     
     const time = new Date(data.timestamp);
     const timeStr = time.toLocaleTimeString("es-CL", { 
@@ -212,22 +377,19 @@ export default function Analytics() {
         fullTime: data.timestamp,
       };
       const updated = [...prev, newPoint];
-      return updated.slice(-20);
+      return updated.slice(-50); // Keep more data for zoom
     });
 
     const insight = analyzeData(data);
-    setAiInsights(prev => [insight, ...prev].slice(0, 10));
+    setAiInsights(prev => [insight, ...prev].slice(0, 15));
   }, [analyzeData]);
 
   // Fetch initial data and setup realtime subscription
   useEffect(() => {
     let channel: RealtimeChannel | null = null;
-    let demoInterval: ReturnType<typeof setInterval> | null = null;
 
     const initializeData = async () => {
-      // If Supabase is not configured, run in demo mode
       if (!supabase) {
-        console.log("[v0] Supabase not configured, running in demo mode");
         setConnectionStatus("demo");
         setHasData(true);
         return;
@@ -236,55 +398,46 @@ export default function Analytics() {
       setConnectionStatus("connecting");
 
       try {
-        // Fetch initial data from pedidos_monitoreo table
         const { data, error } = await supabase
           .from("pedidos_monitoreo")
           .select("*")
           .order("created_at", { ascending: false })
-          .limit(20);
+          .limit(50);
 
         if (error) {
-          console.log("[v0] Supabase error:", error.message);
-          // If table doesn't exist or other error, show no data
           setConnectionStatus("no_data");
           setHasData(false);
           return;
         }
 
         if (!data || data.length === 0) {
-          console.log("[v0] No data found in pedidos_monitoreo table");
           setConnectionStatus("no_data");
           setHasData(false);
           return;
         }
 
-        // Process historical data - map to internal format
         setConnectionStatus("connected");
         const reversedData = [...data].reverse();
         reversedData.forEach((item: PedidoMonitoreo) => {
           processData(mapPedidoToTelemetry(item));
         });
 
-        // Setup realtime subscription for pedidos_monitoreo
         channel = supabase
           .channel("pedidos_monitoreo_realtime")
           .on(
             "postgres_changes",
             { event: "INSERT", schema: "public", table: "pedidos_monitoreo" },
             (payload) => {
-              console.log("[v0] New pedido_monitoreo received:", payload.new);
               processData(mapPedidoToTelemetry(payload.new as PedidoMonitoreo));
             }
           )
           .subscribe((status) => {
-            console.log("[v0] Realtime subscription status:", status);
             if (status === "SUBSCRIBED") {
               setConnectionStatus("connected");
             }
           });
 
-      } catch (err) {
-        console.log("[v0] Error initializing Supabase:", err);
+      } catch {
         setConnectionStatus("no_data");
         setHasData(false);
       }
@@ -292,13 +445,9 @@ export default function Analytics() {
 
     initializeData();
 
-    // Cleanup
     return () => {
       if (channel) {
         supabase?.removeChannel(channel);
-      }
-      if (demoInterval) {
-        clearInterval(demoInterval);
       }
     };
   }, [processData]);
@@ -343,7 +492,7 @@ export default function Analytics() {
     switch (type) {
       case "ok": return "border-green-500/30 bg-green-500/5";
       case "warning": return "border-yellow-500/30 bg-yellow-500/5";
-      case "error": return "border-red-500/30 bg-red-500/5";
+      case "error": return "border-red-500/30 bg-red-500/5 animate-pulse";
       default: return "border-cyan-500/30 bg-cyan-500/5";
     }
   };
@@ -390,7 +539,6 @@ export default function Analytics() {
   if (connectionStatus === "no_data" || (hasData === false && connectionStatus !== "demo")) {
     return (
       <div className="min-h-screen bg-[#020617] text-white flex items-center justify-center">
-        {/* Background Effects */}
         <div className="fixed inset-0 pointer-events-none">
           <div
             className="absolute inset-0 opacity-[0.03]"
@@ -462,6 +610,10 @@ export default function Analytics() {
     );
   }
 
+  const mapPosition: [number, number] = currentData 
+    ? [currentData.lat, currentData.lon] 
+    : [-33.4489, -70.6693];
+
   return (
     <div className="min-h-screen bg-[#020617] text-white">
       {/* Background Effects */}
@@ -481,7 +633,7 @@ export default function Analytics() {
       </div>
 
       {/* Header */}
-      <header className="relative z-10 border-b border-white/10 bg-black/40 backdrop-blur-md">
+      <header className="relative z-10 border-b border-white/10 bg-black/40 backdrop-blur-md sticky top-0">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button
@@ -493,9 +645,13 @@ export default function Analytics() {
               Volver
             </Button>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center">
+              <motion.div 
+                className="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center"
+                animate={isNewData ? { scale: [1, 1.2, 1] } : {}}
+                transition={{ duration: 0.3 }}
+              >
                 <ZapIcon className="w-4 h-4 text-cyan-400" />
-              </div>
+              </motion.div>
               <span className="font-bold text-lg">
                 LOG<span className="text-cyan-400">-COLD</span>
               </span>
@@ -503,19 +659,35 @@ export default function Analytics() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Sound Toggle */}
+            <Button
+              variant="secondary"
+              onClick={() => setSoundEnabled(!soundEnabled)}
+              className={`gap-2 bg-white/5 border border-white/10 hover:bg-white/10 ${
+                !soundEnabled ? "opacity-50" : ""
+              }`}
+              title={soundEnabled ? "Desactivar sonido" : "Activar sonido"}
+            >
+              {soundEnabled ? <Volume2Icon className="w-4 h-4" /> : <VolumeXIcon className="w-4 h-4" />}
+            </Button>
+            
             {/* Data Source Indicator */}
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border ${statusDisplay.className}`}>
               {statusDisplay.icon}
               {statusDisplay.text}
             </div>
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${
-              isStreaming 
-                ? "bg-green-500/10 border border-green-500/30 text-green-400" 
-                : "bg-gray-500/10 border border-gray-500/30 text-gray-400"
-            }`}>
+            <motion.div 
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${
+                isStreaming 
+                  ? "bg-green-500/10 border border-green-500/30 text-green-400" 
+                  : "bg-gray-500/10 border border-gray-500/30 text-gray-400"
+              }`}
+              animate={isNewData && isStreaming ? { scale: [1, 1.1, 1] } : {}}
+              transition={{ duration: 0.2 }}
+            >
               <span className={`w-2 h-2 rounded-full ${isStreaming ? "bg-green-400 animate-pulse" : "bg-gray-400"}`} />
               {isStreaming ? "En vivo" : "Pausado"}
-            </div>
+            </motion.div>
             {connectionStatus === "demo" && (
               <Button
                 variant="secondary"
@@ -550,126 +722,128 @@ export default function Analytics() {
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Charts & GPS */}
+          {/* Left Column - Gauges, Charts & Map */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-              >
-                <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
-                        <ThermometerIcon className="w-5 h-5 text-cyan-400" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400">Temperatura</p>
-                        <p className="text-xl font-bold text-white">
-                          {currentData?.temp.toFixed(1) || "--"}°C
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                        <DropletIcon className="w-5 h-5 text-blue-400" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400">Humedad</p>
-                        <p className="text-xl font-bold text-white">
-                          {currentData?.hum.toFixed(1) || "--"}%
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
-                        <SatelliteIcon className="w-5 h-5 text-green-400" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400">GPS Status</p>
-                        <p className="text-xl font-bold text-green-400">Activo</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-              >
-                <Card className={`bg-white/5 border-white/10 backdrop-blur-sm ${
-                  currentData?.alerta !== "OK" ? "border-red-500/50" : ""
-                }`}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        currentData?.alerta !== "OK" 
-                          ? "bg-red-500/20" 
-                          : "bg-green-500/20"
-                      }`}>
-                        {currentData?.alerta !== "OK" 
-                          ? <AlertTriangleIcon className="w-5 h-5 text-red-400" />
-                          : <CheckCircle2Icon className="w-5 h-5 text-green-400" />
-                        }
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400">Estado</p>
-                        <p className={`text-xl font-bold ${
-                          currentData?.alerta !== "OK" ? "text-red-400" : "text-green-400"
-                        }`}>
-                          {currentData?.alerta || "--"}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </div>
-
-            {/* Temperature Chart */}
+            {/* Animated Gauges */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
+              transition={{ delay: 0.1 }}
             >
               <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-white">
-                    <ThermometerIcon className="w-5 h-5 text-cyan-400" />
-                    Temperatura en Tiempo Real
+                    <ActivityIcon className="w-5 h-5 text-cyan-400" />
+                    Metricas en Tiempo Real
                   </CardTitle>
                   <CardDescription className="text-gray-400">
-                    Monitoreo de temperatura de la cadena de frio (°C)
+                    Indicadores visuales de temperatura, humedad y estado
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[250px]">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6 justify-items-center">
+                    <AnimatedGauge
+                      value={currentData?.temp || 0}
+                      maxValue={15}
+                      label="Temperatura"
+                      unit="°C"
+                      color="#06b6d4"
+                      warningThreshold={6}
+                      dangerThreshold={8}
+                      icon={ThermometerIcon}
+                      isNew={isNewData}
+                    />
+                    <AnimatedGauge
+                      value={currentData?.hum || 0}
+                      maxValue={100}
+                      label="Humedad"
+                      unit="%"
+                      color="#3b82f6"
+                      warningThreshold={95}
+                      dangerThreshold={98}
+                      icon={DropletIcon}
+                      isNew={isNewData}
+                    />
+                    <div className="flex flex-col items-center">
+                      <motion.div 
+                        className={`w-32 h-32 rounded-full flex items-center justify-center border-4 ${
+                          currentData?.alerta !== "OK" 
+                            ? "border-red-500 bg-red-500/10" 
+                            : "border-green-500 bg-green-500/10"
+                        }`}
+                        animate={currentData?.alerta !== "OK" ? { 
+                          boxShadow: ["0 0 0 0 rgba(239,68,68,0.4)", "0 0 0 20px rgba(239,68,68,0)", "0 0 0 0 rgba(239,68,68,0.4)"]
+                        } : {}}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                      >
+                        {currentData?.alerta !== "OK" 
+                          ? <AlertTriangleIcon className="w-12 h-12 text-red-400" />
+                          : <CheckCircle2Icon className="w-12 h-12 text-green-400" />
+                        }
+                      </motion.div>
+                      <p className={`text-sm mt-2 font-medium ${
+                        currentData?.alerta !== "OK" ? "text-red-400" : "text-green-400"
+                      }`}>
+                        {currentData?.alerta || "Sin datos"}
+                      </p>
+                      <p className="text-xs text-gray-400">Estado</p>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <motion.div 
+                        className="w-32 h-32 rounded-full flex items-center justify-center border-4 border-green-500 bg-green-500/10"
+                        animate={isNewData ? { scale: [1, 1.05, 1] } : {}}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <SatelliteIcon className="w-12 h-12 text-green-400" />
+                      </motion.div>
+                      <p className="text-sm mt-2 font-medium text-green-400">Activo</p>
+                      <p className="text-xs text-gray-400">GPS</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Temperature Chart with Zoom */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-white">
+                        <ThermometerIcon className="w-5 h-5 text-cyan-400" />
+                        Temperatura en Tiempo Real
+                      </CardTitle>
+                      <CardDescription className="text-gray-400">
+                        Monitoreo de temperatura - Arrastra para hacer zoom
+                      </CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="bg-white/5 border border-white/10 hover:bg-white/10"
+                        title="Zoom in"
+                      >
+                        <ZoomInIcon className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="bg-white/5 border border-white/10 hover:bg-white/10"
+                        title="Zoom out"
+                      >
+                        <ZoomOutIcon className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[280px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={telemetryHistory}>
                         <defs>
@@ -691,18 +865,28 @@ export default function Analytics() {
                         />
                         <Tooltip
                           contentStyle={{
-                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            backgroundColor: 'rgba(0,0,0,0.9)',
                             border: '1px solid rgba(6,182,212,0.3)',
                             borderRadius: '8px',
                             color: '#fff'
                           }}
+                          labelStyle={{ color: '#06b6d4' }}
                         />
+                        <ReferenceLine y={6} stroke="#f59e0b" strokeDasharray="3 3" label={{ value: "Advertencia", fill: "#f59e0b", fontSize: 10 }} />
+                        <ReferenceLine y={8} stroke="#ef4444" strokeDasharray="3 3" label={{ value: "Peligro", fill: "#ef4444", fontSize: 10 }} />
                         <Area
                           type="monotone"
                           dataKey="temp"
                           stroke="#06b6d4"
                           strokeWidth={2}
                           fill="url(#tempGradient)"
+                          animationDuration={300}
+                        />
+                        <Brush 
+                          dataKey="time" 
+                          height={30} 
+                          stroke="#06b6d4"
+                          fill="rgba(6,182,212,0.1)"
                         />
                       </AreaChart>
                     </ResponsiveContainer>
@@ -711,11 +895,11 @@ export default function Analytics() {
               </Card>
             </motion.div>
 
-            {/* Humidity Chart */}
+            {/* Humidity Chart with Zoom */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
+              transition={{ delay: 0.3 }}
             >
               <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
                 <CardHeader>
@@ -724,11 +908,11 @@ export default function Analytics() {
                     Humedad Relativa
                   </CardTitle>
                   <CardDescription className="text-gray-400">
-                    Nivel de humedad del contenedor (%)
+                    Nivel de humedad del contenedor - Arrastra para hacer zoom
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[200px]">
+                  <div className="h-[230px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={telemetryHistory}>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
@@ -744,18 +928,27 @@ export default function Analytics() {
                         />
                         <Tooltip
                           contentStyle={{
-                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            backgroundColor: 'rgba(0,0,0,0.9)',
                             border: '1px solid rgba(59,130,246,0.3)',
                             borderRadius: '8px',
                             color: '#fff'
                           }}
+                          labelStyle={{ color: '#3b82f6' }}
                         />
+                        <ReferenceLine y={80} stroke="#f59e0b" strokeDasharray="3 3" label={{ value: "Min", fill: "#f59e0b", fontSize: 10 }} />
                         <Line
                           type="monotone"
                           dataKey="hum"
                           stroke="#3b82f6"
                           strokeWidth={2}
                           dot={false}
+                          animationDuration={300}
+                        />
+                        <Brush 
+                          dataKey="time" 
+                          height={25} 
+                          stroke="#3b82f6"
+                          fill="rgba(59,130,246,0.1)"
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -764,83 +957,116 @@ export default function Analytics() {
               </Card>
             </motion.div>
 
-            {/* GPS Monitor */}
+            {/* Interactive Map */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.7 }}
+              transition={{ delay: 0.4 }}
             >
-              <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+              <Card className="bg-white/5 border-white/10 backdrop-blur-sm overflow-hidden">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-white">
-                    <MapPinIcon className="w-5 h-5 text-green-400" />
-                    Monitor GPS
-                  </CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Ubicacion en tiempo real del vehiculo
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="relative bg-black/40 rounded-lg border border-white/10 p-6 overflow-hidden">
-                    {/* Map Grid Background */}
-                    <div
-                      className="absolute inset-0 opacity-20"
-                      style={{
-                        backgroundImage: `
-                          linear-gradient(rgba(0,255,100,0.3) 1px, transparent 1px),
-                          linear-gradient(90deg, rgba(0,255,100,0.3) 1px, transparent 1px)
-                        `,
-                        backgroundSize: "20px 20px",
-                      }}
-                    />
-                    
-                    <div className="relative flex items-center justify-between">
-                      <div className="space-y-4">
-                        <div>
-                          <p className="text-xs text-gray-400 mb-1">Latitud</p>
-                          <p className="text-2xl font-mono text-green-400">
-                            {currentData?.lat.toFixed(6) || "--.------"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-400 mb-1">Longitud</p>
-                          <p className="text-2xl font-mono text-green-400">
-                            {currentData?.lon.toFixed(6) || "--.------"}
-                          </p>
-                        </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-white">
+                        <MapPinIcon className="w-5 h-5 text-green-400" />
+                        Monitor GPS Interactivo
+                      </CardTitle>
+                      <CardDescription className="text-gray-400">
+                        Ubicacion en tiempo real del vehiculo - Mapa interactivo
+                      </CardDescription>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                      <div className="flex gap-1">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setMapZoom(z => Math.min(z + 1, 18))}
+                          className="bg-white/5 border border-white/10 hover:bg-white/10"
+                        >
+                          <ZoomInIcon className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setMapZoom(z => Math.max(z - 1, 5))}
+                          className="bg-white/5 border border-white/10 hover:bg-white/10"
+                        >
+                          <ZoomOutIcon className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setMapZoom(14)}
+                          className="bg-white/5 border border-white/10 hover:bg-white/10"
+                        >
+                          <MaximizeIcon className="w-4 h-4" />
+                        </Button>
                       </div>
-
-                      {/* Animated Position Indicator */}
-                      <div className="relative w-32 h-32">
-                        <div className="absolute inset-0 rounded-full border border-green-500/30" />
-                        <div className="absolute inset-4 rounded-full border border-green-500/40" />
-                        <div className="absolute inset-8 rounded-full border border-green-500/50" />
-                        <motion.div
-                          className="absolute inset-0 flex items-center justify-center"
-                          animate={{ scale: [1, 1.1, 1] }}
-                          transition={{ duration: 2, repeat: Infinity }}
-                        >
-                          <div className="w-4 h-4 rounded-full bg-green-400 shadow-lg shadow-green-400/50" />
-                        </motion.div>
-                        {/* Pulse effect */}
-                        <motion.div
-                          className="absolute inset-0 flex items-center justify-center"
-                          initial={{ scale: 0.8, opacity: 1 }}
-                          animate={{ scale: 2, opacity: 0 }}
-                          transition={{ duration: 2, repeat: Infinity }}
-                        >
-                          <div className="w-4 h-4 rounded-full bg-green-400/50" />
-                        </motion.div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="h-[350px] relative">
+                    <MapContainer
+                      center={mapPosition}
+                      zoom={mapZoom}
+                      style={{ height: "100%", width: "100%" }}
+                      className="rounded-b-lg"
+                    >
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                      />
+                      <MapFollower position={mapPosition} />
+                      <Marker position={mapPosition} icon={customIcon}>
+                        <Popup>
+                          <div className="text-black">
+                            <strong>Log-Cold Tracker</strong><br />
+                            Lat: {currentData?.lat.toFixed(6)}<br />
+                            Lon: {currentData?.lon.toFixed(6)}<br />
+                            Temp: {currentData?.temp}°C<br />
+                            Estado: {currentData?.alerta}
+                          </div>
+                        </Popup>
+                      </Marker>
+                    </MapContainer>
+                    
+                    {/* Coordinates Overlay */}
+                    <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm rounded-lg p-3 border border-white/10 z-[1000]">
+                      <div className="flex gap-4 text-sm">
+                        <div>
+                          <p className="text-xs text-gray-400">Latitud</p>
+                          <motion.p 
+                            className="font-mono text-green-400"
+                            key={currentData?.lat}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                          >
+                            {currentData?.lat.toFixed(6) || "--.------"}
+                          </motion.p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-400">Longitud</p>
+                          <motion.p 
+                            className="font-mono text-green-400"
+                            key={currentData?.lon}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                          >
+                            {currentData?.lon.toFixed(6) || "--.------"}
+                          </motion.p>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Timestamp */}
-                    <div className="relative mt-4 pt-4 border-t border-white/10 flex items-center gap-2 text-sm text-gray-400">
-                      <ClockIcon className="w-4 h-4" />
-                      Ultima actualizacion: {currentData?.timestamp 
-                        ? new Date(currentData.timestamp).toLocaleString("es-CL")
-                        : "--"
-                      }
+                    {/* Live indicator */}
+                    <div className="absolute top-4 right-4 bg-black/80 backdrop-blur-sm rounded-full px-3 py-1 border border-white/10 z-[1000] flex items-center gap-2">
+                      <motion.span 
+                        className="w-2 h-2 rounded-full bg-green-400"
+                        animate={{ scale: [1, 1.3, 1], opacity: [1, 0.7, 1] }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                      />
+                      <span className="text-xs text-green-400">En vivo</span>
                     </div>
                   </div>
                 </CardContent>
@@ -854,12 +1080,17 @@ export default function Analytics() {
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.8 }}
+              transition={{ delay: 0.5 }}
             >
               <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-white">
-                    <BrainCircuitIcon className="w-5 h-5 text-purple-400" />
+                    <motion.div
+                      animate={isNewData ? { rotate: [0, 360] } : {}}
+                      transition={{ duration: 0.5 }}
+                    >
+                      <BrainCircuitIcon className="w-5 h-5 text-purple-400" />
+                    </motion.div>
                     IA Insights
                   </CardTitle>
                   <CardDescription className="text-gray-400">
@@ -867,7 +1098,7 @@ export default function Analytics() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+                  <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                     <AnimatePresence mode="popLayout">
                       {aiInsights.length === 0 ? (
                         <div className="text-center py-8 text-gray-400">
@@ -878,13 +1109,19 @@ export default function Analytics() {
                         aiInsights.map((insight) => (
                           <motion.div
                             key={insight.id}
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, x: -10 }}
+                            initial={{ opacity: 0, x: -20, scale: 0.95 }}
+                            animate={{ opacity: 1, x: 0, scale: 1 }}
+                            exit={{ opacity: 0, x: 20, scale: 0.95 }}
+                            transition={{ duration: 0.3 }}
                             className={`p-3 rounded-lg border ${getInsightBg(insight.type)}`}
                           >
                             <div className="flex items-start gap-2">
-                              {getInsightIcon(insight.type)}
+                              <motion.div
+                                animate={insight.type === "error" ? { scale: [1, 1.2, 1] } : {}}
+                                transition={{ duration: 0.5, repeat: insight.type === "error" ? Infinity : 0 }}
+                              >
+                                {getInsightIcon(insight.type)}
+                              </motion.div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm text-white leading-relaxed">
                                   {insight.message}
@@ -907,7 +1144,7 @@ export default function Analytics() {
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.9 }}
+              transition={{ delay: 0.6 }}
             >
               <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
                 <CardHeader>
@@ -925,11 +1162,11 @@ export default function Analytics() {
                       value={dataInput}
                       onChange={(e) => setDataInput(e.target.value)}
                       placeholder="2024-01-15T10:30:00Z;-33.4489;-70.6693;4.5;88.2;OK"
-                      className="w-full h-24 bg-black/40 border border-white/10 rounded-lg p-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-cyan-500/50 resize-none font-mono"
+                      className="w-full h-24 bg-black/40 border border-white/10 rounded-lg p-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30 resize-none font-mono transition-all"
                     />
                     <Button
                       onClick={handleDataInput}
-                      className="w-full bg-cyan-500/20 border border-cyan-500/40 hover:bg-cyan-500/30 text-cyan-400"
+                      className="w-full bg-cyan-500/20 border border-cyan-500/40 hover:bg-cyan-500/30 text-cyan-400 transition-all hover:scale-[1.02]"
                     >
                       <RefreshCwIcon className="w-4 h-4 mr-2" />
                       Procesar Datos
@@ -943,7 +1180,7 @@ export default function Analytics() {
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 1 }}
+              transition={{ delay: 0.7 }}
             >
               <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
                 <CardHeader className="pb-2">
@@ -962,21 +1199,93 @@ export default function Analytics() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400">Puntos:</span>
-                      <span className="text-white">{telemetryHistory.length}</span>
+                      <motion.span 
+                        className="text-white"
+                        key={telemetryHistory.length}
+                        initial={{ scale: 1.2 }}
+                        animate={{ scale: 1 }}
+                      >
+                        {telemetryHistory.length}
+                      </motion.span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400">Alertas:</span>
-                      <span className="text-white">
+                      <motion.span 
+                        className={aiInsights.filter(i => i.type === "error").length > 0 ? "text-red-400" : "text-white"}
+                        key={aiInsights.filter(i => i.type === "error").length}
+                        initial={{ scale: 1.2 }}
+                        animate={{ scale: 1 }}
+                      >
                         {aiInsights.filter(i => i.type === "error").length}
+                      </motion.span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Sonido:</span>
+                      <span className={soundEnabled ? "text-green-400" : "text-gray-500"}>
+                        {soundEnabled ? "Activado" : "Desactivado"}
                       </span>
                     </div>
+                    {currentData?.hardware_id && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Hardware:</span>
+                        <span className="text-cyan-400">{currentData.hardware_id}</span>
+                      </div>
+                    )}
                   </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Last Update */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.8 }}
+            >
+              <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+                <CardContent className="py-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <ClockIcon className="w-4 h-4" />
+                    <span>Ultima actualizacion:</span>
+                  </div>
+                  <motion.p 
+                    className="text-white font-mono text-sm mt-1"
+                    key={currentData?.timestamp}
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    {currentData?.timestamp 
+                      ? new Date(currentData.timestamp).toLocaleString("es-CL")
+                      : "--"
+                    }
+                  </motion.p>
                 </CardContent>
               </Card>
             </motion.div>
           </div>
         </div>
       </main>
+
+      {/* Custom scrollbar styles */}
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.3);
+        }
+        .leaflet-container {
+          background: #020617 !important;
+        }
+      `}</style>
     </div>
   );
 }
