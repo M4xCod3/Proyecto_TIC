@@ -66,33 +66,6 @@ PROYECTO_TIC/
 
 ---
 
-## ⚙️ Instalación y uso
-
-### 1. Clonar el repositorio
-
-```bash
-git clone https://github.com/M4xCod3/Proyecto_TIC.git
-cd proyecto-tic
-```
-
-### 2. Instalar dependencias
-
-```bash
-npm install
-```
-
-### 3. Ejecutar el proyecto
-
-```bash
-npm run dev
-```
-
-Luego abre en tu navegador:
-
-```
-http://localhost:xxxx
-```
-
 ---
 
 ## 🧩 Funcionalidades
@@ -118,12 +91,6 @@ http://localhost:xxxx
 ---
 
 ## 🔧 Scripts disponibles
-
-```bash
-npm run dev     # Ejecuta el servidor de desarrollo
-npm run build   # Compila para producción
-npm run preview # Previsualiza el build
-```
 
 ---
 
