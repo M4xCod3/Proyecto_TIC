@@ -11,7 +11,6 @@ import {
   RefreshCwIcon,
   ArrowLeftIcon,
 } from "lucide-react";
-import "./index.css";
 
 // Types
 interface PedidoMonitoreo {
@@ -39,6 +38,230 @@ if (SUPABASE_URL && SUPABASE_ANON_KEY) {
   supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
+// Inline styles
+const styles = {
+  container: {
+    minHeight: "100vh",
+    backgroundColor: "#0f172a",
+    color: "#ffffff",
+    fontFamily: "'Segoe UI', sans-serif",
+  } as React.CSSProperties,
+  header: {
+    backgroundColor: "#1e293b",
+    borderBottom: "1px solid #334155",
+    padding: "12px 16px",
+  } as React.CSSProperties,
+  headerContent: {
+    maxWidth: "1200px",
+    margin: "0 auto",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+  } as React.CSSProperties,
+  headerLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+  } as React.CSSProperties,
+  backButton: {
+    padding: "8px",
+    backgroundColor: "transparent",
+    border: "none",
+    color: "#ffffff",
+    cursor: "pointer",
+    borderRadius: "8px",
+  } as React.CSSProperties,
+  title: {
+    fontSize: "20px",
+    fontWeight: "bold",
+    color: "#22d3ee",
+    margin: 0,
+  } as React.CSSProperties,
+  subtitle: {
+    fontSize: "14px",
+    color: "#94a3b8",
+    margin: 0,
+  } as React.CSSProperties,
+  statusBadge: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  } as React.CSSProperties,
+  statusDot: {
+    width: "8px",
+    height: "8px",
+    backgroundColor: "#4ade80",
+    borderRadius: "50%",
+  } as React.CSSProperties,
+  main: {
+    maxWidth: "1200px",
+    margin: "0 auto",
+    padding: "16px",
+    display: "grid",
+    gridTemplateColumns: "1fr",
+    gap: "16px",
+  } as React.CSSProperties,
+  mainDesktop: {
+    gridTemplateColumns: "2fr 1fr",
+  } as React.CSSProperties,
+  leftColumn: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: "16px",
+  } as React.CSSProperties,
+  statsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: "12px",
+  } as React.CSSProperties,
+  statCard: {
+    backgroundColor: "#1e293b",
+    borderRadius: "8px",
+    padding: "16px",
+    border: "1px solid #334155",
+  } as React.CSSProperties,
+  statLabel: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    color: "#94a3b8",
+    fontSize: "12px",
+    marginBottom: "4px",
+  } as React.CSSProperties,
+  statValue: {
+    fontSize: "24px",
+    fontWeight: "bold",
+    margin: 0,
+  } as React.CSSProperties,
+  card: {
+    backgroundColor: "#1e293b",
+    borderRadius: "8px",
+    border: "1px solid #334155",
+    overflow: "hidden",
+  } as React.CSSProperties,
+  cardHeader: {
+    padding: "12px",
+    borderBottom: "1px solid #334155",
+    fontWeight: 600,
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  } as React.CSSProperties,
+  mapContainer: {
+    height: "300px",
+  } as React.CSSProperties,
+  tableContainer: {
+    overflowX: "auto" as const,
+    maxHeight: "300px",
+    overflowY: "auto" as const,
+  } as React.CSSProperties,
+  table: {
+    width: "100%",
+    fontSize: "14px",
+    borderCollapse: "collapse" as const,
+  } as React.CSSProperties,
+  th: {
+    backgroundColor: "#334155",
+    padding: "8px 12px",
+    textAlign: "left" as const,
+    position: "sticky" as const,
+    top: 0,
+  } as React.CSSProperties,
+  td: {
+    padding: "8px 12px",
+    borderTop: "1px solid #334155",
+  } as React.CSSProperties,
+  chatContainer: {
+    backgroundColor: "#1e293b",
+    borderRadius: "8px",
+    border: "1px solid #334155",
+    display: "flex",
+    flexDirection: "column" as const,
+    height: "500px",
+  } as React.CSSProperties,
+  chatMessages: {
+    flex: 1,
+    overflowY: "auto" as const,
+    padding: "12px",
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: "12px",
+  } as React.CSSProperties,
+  chatInputContainer: {
+    padding: "12px",
+    borderTop: "1px solid #334155",
+  } as React.CSSProperties,
+  chatInputRow: {
+    display: "flex",
+    gap: "8px",
+  } as React.CSSProperties,
+  chatInput: {
+    flex: 1,
+    backgroundColor: "#334155",
+    border: "1px solid #475569",
+    borderRadius: "8px",
+    padding: "8px 12px",
+    color: "#ffffff",
+    fontSize: "14px",
+    outline: "none",
+  } as React.CSSProperties,
+  chatButton: {
+    padding: "8px 12px",
+    backgroundColor: "#0891b2",
+    border: "none",
+    borderRadius: "8px",
+    color: "#ffffff",
+    cursor: "pointer",
+  } as React.CSSProperties,
+  userMessage: {
+    alignSelf: "flex-end",
+    backgroundColor: "#0891b2",
+    color: "#ffffff",
+    borderRadius: "8px",
+    padding: "8px 12px",
+    maxWidth: "85%",
+    fontSize: "14px",
+  } as React.CSSProperties,
+  assistantMessage: {
+    alignSelf: "flex-start",
+    backgroundColor: "#334155",
+    color: "#e2e8f0",
+    borderRadius: "8px",
+    padding: "8px 12px",
+    maxWidth: "85%",
+    fontSize: "14px",
+    whiteSpace: "pre-wrap" as const,
+  } as React.CSSProperties,
+  centerScreen: {
+    minHeight: "100vh",
+    backgroundColor: "#0f172a",
+    color: "#ffffff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontFamily: "'Segoe UI', sans-serif",
+  } as React.CSSProperties,
+  centerContent: {
+    textAlign: "center" as const,
+    padding: "24px",
+    maxWidth: "400px",
+  } as React.CSSProperties,
+  retryButton: {
+    padding: "8px 16px",
+    backgroundColor: "#0891b2",
+    border: "none",
+    borderRadius: "8px",
+    color: "#ffffff",
+    cursor: "pointer",
+    marginTop: "16px",
+  } as React.CSSProperties,
+  badge: {
+    padding: "2px 8px",
+    borderRadius: "4px",
+    fontSize: "12px",
+  } as React.CSSProperties,
+};
+
 export default function Analytics() {
   const [data, setData] = useState<PedidoMonitoreo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,12 +271,20 @@ export default function Analytics() {
   ]);
   const [chatInput, setChatInput] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
+
+  // Handle resize
+  useEffect(() => {
+    const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Fetch data
   useEffect(() => {
     const fetchData = async () => {
       if (!supabase) {
-        setError("Supabase no configurado. Agrega VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en las variables de entorno.");
+        setError("Supabase no configurado");
         setLoading(false);
         return;
       }
@@ -66,7 +297,7 @@ export default function Analytics() {
           .limit(50);
 
         if (queryError) {
-          setError("Error de consulta: " + queryError.message);
+          setError("Error: " + queryError.message);
           setLoading(false);
           return;
         }
@@ -98,50 +329,30 @@ export default function Analytics() {
     fetchData();
   }, []);
 
-  // Scroll chat to bottom
+  // Scroll chat
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
-  // Get latest data point
   const latestData = data[0];
 
-  // Analyze data for chatbot
-  const analyzeData = (): string => {
-    if (data.length === 0) return "No hay datos disponibles actualmente.";
-
+  // Analyze data
+  const analyzeData = () => {
+    if (data.length === 0) return null;
     const latest = data[0];
     const avgTemp = data.reduce((sum, d) => sum + d.temperatura, 0) / data.length;
     const avgHum = data.reduce((sum, d) => sum + d.humedad, 0) / data.length;
     const alertCount = data.filter(d => d.alerta !== "OK").length;
-
     let status = "OPTIMO";
     if (latest.temperatura < 2 || latest.temperatura > 8) status = "ALERTA TEMPERATURA";
     if (latest.humedad < 60 || latest.humedad > 95) status = "ALERTA HUMEDAD";
     if (latest.alerta !== "OK") status = "ALERTA ACTIVA";
-
-    return JSON.stringify({
-      status,
-      ultimaLectura: {
-        temperatura: latest.temperatura.toFixed(1),
-        humedad: latest.humedad.toFixed(1),
-        ubicacion: latest.latitud.toFixed(4) + ", " + latest.longitud.toFixed(4),
-        alerta: latest.alerta,
-        fecha: new Date(latest.created_at).toLocaleString("es-CL"),
-      },
-      promedios: {
-        temperatura: avgTemp.toFixed(1),
-        humedad: avgHum.toFixed(1),
-      },
-      totalLecturas: data.length,
-      alertasActivas: alertCount,
-    });
+    return { status, latest, avgTemp, avgHum, alertCount, total: data.length };
   };
 
   // Handle chat
   const handleSendMessage = () => {
     if (!chatInput.trim()) return;
-
     const userMessage = chatInput.trim();
     setChatInput("");
     setChatMessages(prev => [...prev, { role: "user", content: userMessage }]);
@@ -149,220 +360,188 @@ export default function Analytics() {
     setTimeout(() => {
       let response = "";
       const lowerMsg = userMessage.toLowerCase();
+      const analysis = analyzeData();
 
-      if (data.length === 0) {
-        response = "No hay datos disponibles actualmente para analizar.";
+      if (!analysis) {
+        response = "No hay datos disponibles.";
       } else {
-        const analysis = JSON.parse(analyzeData());
-
-        if (lowerMsg.includes("estado") || lowerMsg.includes("como esta") || lowerMsg.includes("cómo está")) {
-          response = "Estado actual del pedido: " + analysis.status + "\n\nUltima lectura:\n- Temperatura: " + analysis.ultimaLectura.temperatura + "°C\n- Humedad: " + analysis.ultimaLectura.humedad + "%\n- Ubicacion: " + analysis.ultimaLectura.ubicacion + "\n- Fecha: " + analysis.ultimaLectura.fecha;
-        } else if (lowerMsg.includes("temperatura") || lowerMsg.includes("temp")) {
-          const tempActual = parseFloat(analysis.ultimaLectura.temperatura);
-          const tempStatus = tempActual >= 2 && tempActual <= 8 ? "dentro del rango optimo (2-8°C)" : "FUERA del rango optimo";
-          response = "La temperatura actual es " + analysis.ultimaLectura.temperatura + "°C, " + tempStatus + ".\n\nPromedio historico: " + analysis.promedios.temperatura + "°C";
-        } else if (lowerMsg.includes("humedad") || lowerMsg.includes("hum")) {
-          const humActual = parseFloat(analysis.ultimaLectura.humedad);
-          const humStatus = humActual >= 60 && humActual <= 95 ? "dentro del rango optimo (60-95%)" : "FUERA del rango optimo";
-          response = "La humedad actual es " + analysis.ultimaLectura.humedad + "%, " + humStatus + ".\n\nPromedio historico: " + analysis.promedios.humedad + "%";
-        } else if (lowerMsg.includes("ubicacion") || lowerMsg.includes("donde") || lowerMsg.includes("dónde") || lowerMsg.includes("gps")) {
-          response = "La ubicacion actual del pedido es:\n\nCoordenadas: " + analysis.ultimaLectura.ubicacion + "\n\nPuedes ver la ubicacion en el mapa de arriba.";
-        } else if (lowerMsg.includes("alerta") || lowerMsg.includes("problema")) {
-          if (analysis.alertasActivas > 0) {
-            response = "Hay " + analysis.alertasActivas + " alertas en las ultimas " + analysis.totalLecturas + " lecturas.\n\nAlerta actual: " + analysis.ultimaLectura.alerta;
-          } else {
-            response = "No hay alertas activas. El sistema funciona correctamente con " + analysis.totalLecturas + " lecturas registradas.";
-          }
-        } else if (lowerMsg.includes("resumen") || lowerMsg.includes("todo")) {
-          response = "Resumen del Pedido Log-Cold\n\n- Estado: " + analysis.status + "\n- Temperatura: " + analysis.ultimaLectura.temperatura + "°C (prom: " + analysis.promedios.temperatura + "°C)\n- Humedad: " + analysis.ultimaLectura.humedad + "% (prom: " + analysis.promedios.humedad + "%)\n- Ubicacion: " + analysis.ultimaLectura.ubicacion + "\n- Lecturas totales: " + analysis.totalLecturas + "\n- Alertas: " + analysis.alertasActivas;
+        if (lowerMsg.includes("estado") || lowerMsg.includes("como")) {
+          response = `Estado: ${analysis.status}\nTemp: ${analysis.latest.temperatura.toFixed(1)}C\nHumedad: ${analysis.latest.humedad.toFixed(1)}%\nUbicacion: ${analysis.latest.latitud.toFixed(4)}, ${analysis.latest.longitud.toFixed(4)}`;
+        } else if (lowerMsg.includes("temp")) {
+          response = `Temperatura actual: ${analysis.latest.temperatura.toFixed(1)}C\nPromedio: ${analysis.avgTemp.toFixed(1)}C\nRango optimo: 2-8C`;
+        } else if (lowerMsg.includes("hum")) {
+          response = `Humedad actual: ${analysis.latest.humedad.toFixed(1)}%\nPromedio: ${analysis.avgHum.toFixed(1)}%\nRango optimo: 60-95%`;
+        } else if (lowerMsg.includes("ubic") || lowerMsg.includes("gps") || lowerMsg.includes("donde")) {
+          response = `Ubicacion GPS:\nLat: ${analysis.latest.latitud.toFixed(6)}\nLon: ${analysis.latest.longitud.toFixed(6)}`;
+        } else if (lowerMsg.includes("alerta")) {
+          response = analysis.alertCount > 0 ? `Hay ${analysis.alertCount} alertas en ${analysis.total} lecturas.` : "No hay alertas activas.";
         } else {
-          response = "Puedo ayudarte con:\n- Estado del pedido\n- Temperatura actual\n- Humedad actual\n- Ubicacion GPS\n- Alertas activas\n- Resumen completo\n\nPreguntame sobre cualquiera de estos temas.";
+          response = "Pregunta sobre: estado, temperatura, humedad, ubicacion, alertas";
         }
       }
-
       setChatMessages(prev => [...prev, { role: "assistant", content: response }]);
-    }, 500);
+    }, 300);
   };
 
-  // Format date
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleString("es-CL", {
-      day: "2-digit",
-      month: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return new Date(dateStr).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
   };
 
-  // Loading state
+  // Loading
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center">
-        <div className="text-center">
-          <RefreshCwIcon className="w-12 h-12 text-cyan-400 animate-spin mx-auto mb-4" />
-          <p className="text-gray-400">Cargando datos...</p>
+      <div style={styles.centerScreen}>
+        <div style={styles.centerContent}>
+          <RefreshCwIcon style={{ width: 48, height: 48, color: "#22d3ee", animation: "spin 1s linear infinite" }} />
+          <p style={{ color: "#94a3b8", marginTop: 16 }}>Cargando datos...</p>
         </div>
       </div>
     );
   }
 
-  // Error state
+  // Error
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center">
-        <div className="text-center max-w-md px-4">
-          <AlertTriangleIcon className="w-12 h-12 text-red-400 mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2">Error</h2>
-          <p className="text-gray-400 mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded-lg transition-colors"
-          >
-            Reintentar
-          </button>
+      <div style={styles.centerScreen}>
+        <div style={styles.centerContent}>
+          <AlertTriangleIcon style={{ width: 48, height: 48, color: "#f87171" }} />
+          <h2 style={{ margin: "16px 0 8px" }}>Error</h2>
+          <p style={{ color: "#94a3b8" }}>{error}</p>
+          <button onClick={() => window.location.reload()} style={styles.retryButton}>Reintentar</button>
         </div>
       </div>
     );
   }
 
-  // No data state
+  // No data
   if (data.length === 0) {
     return (
-      <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center">
-        <div className="text-center max-w-md px-4">
-          <AlertTriangleIcon className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2">Sin datos en tiempo real</h2>
-          <p className="text-gray-400 mb-4">No se encontraron datos de telemetria en la base de datos.</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded-lg transition-colors"
-          >
-            Reintentar
-          </button>
+      <div style={styles.centerScreen}>
+        <div style={styles.centerContent}>
+          <AlertTriangleIcon style={{ width: 48, height: 48, color: "#fbbf24" }} />
+          <h2 style={{ margin: "16px 0 8px" }}>Sin datos en tiempo real</h2>
+          <p style={{ color: "#94a3b8" }}>No hay datos de telemetria disponibles.</p>
+          <button onClick={() => window.location.reload()} style={styles.retryButton}>Reintentar</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
+    <div style={styles.container}>
       {/* Header */}
-      <header className="bg-slate-800 border-b border-slate-700 px-4 py-3">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <a href="/" className="p-2 hover:bg-slate-700 rounded-lg transition-colors">
-              <ArrowLeftIcon className="w-5 h-5" />
+      <header style={styles.header}>
+        <div style={styles.headerContent}>
+          <div style={styles.headerLeft}>
+            <a href="/" style={styles.backButton}>
+              <ArrowLeftIcon style={{ width: 20, height: 20 }} />
             </a>
             <div>
-              <h1 className="text-xl font-bold text-cyan-400">Log-Cold Analytics</h1>
-              <p className="text-sm text-gray-400">Monitoreo en tiempo real</p>
+              <h1 style={styles.title}>Log-Cold Analytics</h1>
+              <p style={styles.subtitle}>Monitoreo en tiempo real</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-            <span className="text-sm text-green-400">Conectado</span>
+          <div style={styles.statusBadge}>
+            <span style={styles.statusDot} />
+            <span style={{ fontSize: 14, color: "#4ade80" }}>Conectado</span>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Left Column - Map and Stats */}
-        <div className="lg:col-span-2 space-y-4">
-          {/* Quick Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-              <div className="flex items-center gap-2 text-gray-400 mb-1">
-                <ThermometerIcon className="w-4 h-4" />
-                <span className="text-xs">Temperatura</span>
+      {/* Main */}
+      <main style={{ ...styles.main, ...(isDesktop ? styles.mainDesktop : {}) }}>
+        {/* Left Column */}
+        <div style={styles.leftColumn}>
+          {/* Stats */}
+          <div style={{ ...styles.statsGrid, gridTemplateColumns: isDesktop ? "repeat(4, 1fr)" : "repeat(2, 1fr)" }}>
+            <div style={styles.statCard}>
+              <div style={styles.statLabel}>
+                <ThermometerIcon style={{ width: 16, height: 16 }} />
+                <span>Temperatura</span>
               </div>
-              <p className="text-2xl font-bold text-cyan-400">{latestData.temperatura.toFixed(1)}°C</p>
+              <p style={{ ...styles.statValue, color: "#22d3ee" }}>{latestData.temperatura.toFixed(1)}°C</p>
             </div>
-            <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-              <div className="flex items-center gap-2 text-gray-400 mb-1">
-                <DropletIcon className="w-4 h-4" />
-                <span className="text-xs">Humedad</span>
+            <div style={styles.statCard}>
+              <div style={styles.statLabel}>
+                <DropletIcon style={{ width: 16, height: 16 }} />
+                <span>Humedad</span>
               </div>
-              <p className="text-2xl font-bold text-blue-400">{latestData.humedad.toFixed(1)}%</p>
+              <p style={{ ...styles.statValue, color: "#60a5fa" }}>{latestData.humedad.toFixed(1)}%</p>
             </div>
-            <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-              <div className="flex items-center gap-2 text-gray-400 mb-1">
-                <MapPinIcon className="w-4 h-4" />
-                <span className="text-xs">Ubicacion</span>
+            <div style={styles.statCard}>
+              <div style={styles.statLabel}>
+                <MapPinIcon style={{ width: 16, height: 16 }} />
+                <span>Ubicacion</span>
               </div>
-              <p className="text-sm font-mono text-green-400">{latestData.latitud.toFixed(4)}</p>
-              <p className="text-sm font-mono text-green-400">{latestData.longitud.toFixed(4)}</p>
+              <p style={{ fontSize: 12, fontFamily: "monospace", color: "#4ade80" }}>
+                {latestData.latitud.toFixed(4)}<br />{latestData.longitud.toFixed(4)}
+              </p>
             </div>
-            <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-              <div className="flex items-center gap-2 text-gray-400 mb-1">
+            <div style={styles.statCard}>
+              <div style={styles.statLabel}>
                 {latestData.alerta === "OK" ? (
-                  <CheckCircleIcon className="w-4 h-4 text-green-400" />
+                  <CheckCircleIcon style={{ width: 16, height: 16, color: "#4ade80" }} />
                 ) : (
-                  <AlertTriangleIcon className="w-4 h-4 text-red-400" />
+                  <AlertTriangleIcon style={{ width: 16, height: 16, color: "#f87171" }} />
                 )}
-                <span className="text-xs">Estado</span>
+                <span>Estado</span>
               </div>
-              <p className={`text-lg font-bold ${latestData.alerta === "OK" ? "text-green-400" : "text-red-400"}`}>
+              <p style={{ ...styles.statValue, fontSize: 18, color: latestData.alerta === "OK" ? "#4ade80" : "#f87171" }}>
                 {latestData.alerta}
               </p>
             </div>
           </div>
 
           {/* Map */}
-          <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-            <div className="p-3 border-b border-slate-700">
-              <h3 className="font-semibold flex items-center gap-2">
-                <MapPinIcon className="w-4 h-4 text-cyan-400" />
-                Ubicacion GPS
-              </h3>
+          <div style={styles.card}>
+            <div style={styles.cardHeader}>
+              <MapPinIcon style={{ width: 16, height: 16, color: "#22d3ee" }} />
+              Ubicacion GPS
             </div>
-            <div className="h-[300px]">
+            <div style={styles.mapContainer}>
               <iframe
-                title="Mapa de ubicacion"
+                title="Mapa"
                 width="100%"
                 height="100%"
                 frameBorder="0"
-                style={{ border: 0 }}
-                src={`https://www.openstreetmap.org/export/embed.html?bbox=${latestData.longitud - 0.01}%2C${latestData.latitud - 0.01}%2C${latestData.longitud + 0.01}%2C${latestData.latitud + 0.01}&layer=mapnik&marker=${latestData.latitud}%2C${latestData.longitud}`}
-                allowFullScreen
+                src={`https://www.openstreetmap.org/export/embed.html?bbox=${latestData.longitud - 0.01},${latestData.latitud - 0.01},${latestData.longitud + 0.01},${latestData.latitud + 0.01}&layer=mapnik&marker=${latestData.latitud},${latestData.longitud}`}
               />
             </div>
           </div>
 
-          {/* Data Table */}
-          <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-            <div className="p-3 border-b border-slate-700">
-              <h3 className="font-semibold">Historial de Datos</h3>
-            </div>
-            <div className="overflow-x-auto max-h-[300px] overflow-y-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-700 sticky top-0">
+          {/* Table */}
+          <div style={styles.card}>
+            <div style={styles.cardHeader}>Historial de Datos</div>
+            <div style={styles.tableContainer}>
+              <table style={styles.table}>
+                <thead>
                   <tr>
-                    <th className="px-3 py-2 text-left">Fecha</th>
-                    <th className="px-3 py-2 text-left">Temp</th>
-                    <th className="px-3 py-2 text-left">Humedad</th>
-                    <th className="px-3 py-2 text-left">Ubicacion</th>
-                    <th className="px-3 py-2 text-left">Estado</th>
+                    <th style={styles.th}>Fecha</th>
+                    <th style={styles.th}>Temp</th>
+                    <th style={styles.th}>Humedad</th>
+                    <th style={styles.th}>Ubicacion</th>
+                    <th style={styles.th}>Estado</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.map((row) => (
-                    <tr key={row.id} className="border-t border-slate-700 hover:bg-slate-700/50">
-                      <td className="px-3 py-2 text-gray-300">{formatDate(row.created_at)}</td>
-                      <td className="px-3 py-2">
-                        <span className={row.temperatura >= 2 && row.temperatura <= 8 ? "text-cyan-400" : "text-red-400"}>
-                          {row.temperatura.toFixed(1)}°C
-                        </span>
+                    <tr key={row.id}>
+                      <td style={styles.td}>{formatDate(row.created_at)}</td>
+                      <td style={{ ...styles.td, color: row.temperatura >= 2 && row.temperatura <= 8 ? "#22d3ee" : "#f87171" }}>
+                        {row.temperatura.toFixed(1)}°C
                       </td>
-                      <td className="px-3 py-2">
-                        <span className={row.humedad >= 60 && row.humedad <= 95 ? "text-blue-400" : "text-yellow-400"}>
-                          {row.humedad.toFixed(1)}%
-                        </span>
+                      <td style={{ ...styles.td, color: row.humedad >= 60 && row.humedad <= 95 ? "#60a5fa" : "#fbbf24" }}>
+                        {row.humedad.toFixed(1)}%
                       </td>
-                      <td className="px-3 py-2 font-mono text-xs text-gray-400">
+                      <td style={{ ...styles.td, fontFamily: "monospace", fontSize: 12, color: "#94a3b8" }}>
                         {row.latitud.toFixed(4)}, {row.longitud.toFixed(4)}
                       </td>
-                      <td className="px-3 py-2">
-                        <span className={`px-2 py-0.5 rounded text-xs ${row.alerta === "OK" ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                      <td style={styles.td}>
+                        <span style={{
+                          ...styles.badge,
+                          backgroundColor: row.alerta === "OK" ? "rgba(74, 222, 128, 0.2)" : "rgba(248, 113, 113, 0.2)",
+                          color: row.alerta === "OK" ? "#4ade80" : "#f87171",
+                        }}>
                           {row.alerta}
                         </span>
                       </td>
@@ -374,58 +553,47 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* Right Column - Chatbot */}
-        <div className="bg-slate-800 rounded-lg border border-slate-700 flex flex-col h-[600px]">
-          <div className="p-3 border-b border-slate-700 flex items-center gap-2">
-            <BotIcon className="w-5 h-5 text-cyan-400" />
-            <h3 className="font-semibold">Asistente Log-Cold</h3>
+        {/* Chat */}
+        <div style={styles.chatContainer}>
+          <div style={styles.cardHeader}>
+            <BotIcon style={{ width: 20, height: 20, color: "#22d3ee" }} />
+            Asistente Log-Cold
           </div>
-          
-          {/* Chat Messages */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-3">
+          <div style={styles.chatMessages}>
             {chatMessages.map((msg, i) => (
-              <div
-                key={i}
-                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
-                    msg.role === "user"
-                      ? "bg-cyan-600 text-white"
-                      : "bg-slate-700 text-gray-200"
-                  }`}
-                >
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
-                </div>
+              <div key={i} style={msg.role === "user" ? styles.userMessage : styles.assistantMessage}>
+                {msg.content}
               </div>
             ))}
             <div ref={chatEndRef} />
           </div>
-
-          {/* Chat Input */}
-          <div className="p-3 border-t border-slate-700">
-            <div className="flex gap-2">
+          <div style={styles.chatInputContainer}>
+            <div style={styles.chatInputRow}>
               <input
                 type="text"
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
                 placeholder="Pregunta sobre tu pedido..."
-                className="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-500"
+                style={styles.chatInput}
               />
-              <button
-                onClick={handleSendMessage}
-                className="p-2 bg-cyan-600 hover:bg-cyan-700 rounded-lg transition-colors"
-              >
-                <SendIcon className="w-5 h-5" />
+              <button onClick={handleSendMessage} style={styles.chatButton}>
+                <SendIcon style={{ width: 20, height: 20 }} />
               </button>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              Prueba: estado, temperatura, humedad, ubicacion, alertas
+            <p style={{ fontSize: 12, color: "#64748b", marginTop: 8 }}>
+              Prueba: estado, temperatura, humedad, ubicacion
             </p>
           </div>
         </div>
       </main>
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
