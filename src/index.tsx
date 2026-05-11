@@ -20,7 +20,7 @@ export default function Index() {
             <a href="#inicio">Inicio</a>
             <a href="#about">Proyecto</a>
             <a href="#hardware">Hardware</a>
-            <a href="document">Documentacion</a>
+            <a href="#document">Documentacion</a>
             <a href="/analytics.html">Analytics</a>
             <a href="#contact">Contacto</a>
           </div>
