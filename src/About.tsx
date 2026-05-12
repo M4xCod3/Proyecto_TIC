@@ -14,25 +14,25 @@ const features = [
     icon: LightbulbIcon,
     title: "Innovación",
     description:
-      "Aplicamos tecnologías emergentes de IoT para resolver problemas reales con soluciones creativas y eficientes.",
+      "Implementamos un sistema de monitoreo basado en el protocolo ESP-NOW y microcontroladores ESP32,permitiendo una comunicación robusta y de bajo consumo que no depende exclusivamente de redes WiFi convencionales.",
   },
   {
     icon: TargetIcon,
     title: "Objetivo claro",
     description:
-      "Nuestro proyecto tiene metas definidas: automatizar, monitorear y mejorar procesos con datos en tiempo real.",
+      "Nuestra meta es eliminar la incertidumbre de los delivery. Automatizamos la captura de telemetría (temperatura, humedad y ubicación) para ofrecer reportes históricos auditables y alertas en tiempo real.",
   },
   {
     icon: UsersIcon,
     title: "Trabajo en equipo",
     description:
-      "Un equipo multidisciplinario con habilidades complementarias en hardware, software y diseño.",
+      "Desarrollamos el ciclo completo del producto: desde el diseño del hardware y firmware en C++, hasta la infraestructura de datos en Supabase y una interfaz de gestión moderna para el usuario final.",
   },
   {
     icon: TrendingUpIcon,
     title: "Impacto real",
     description:
-      "Buscamos que nuestra solución tenga impacto tangible y escalable en la comunidad.",
+      "Diseñado específicamente para PyMEs farmacéuticas y de delivery gastronómico. Log-Cold democratiza el acceso a tecnología de alta precisión, reduciendo mermas y asegurando el cumplimiento de normativas sanitarias.",
   },
 ];
 
@@ -90,18 +90,18 @@ export default function About() {
           <h2 className="about-title">
             ¿Qué es{" "}
             <span className="gradient-text">
-              nuestro proyecto?
+              LogCold?
             </span>
           </h2>
 
           <p className="about-text">
-            Somos un equipo de estudiantes desarrollando una solución IoT
-            innovadora como parte de nuestro proyecto TIC...
+            Una solución IoT integral diseñada para garantizar la integridad 
+            de la cadena de frío en el transporte de productos críticos.
           </p>
 
           <p className="about-text">
-            Nuestro objetivo es demostrar cómo la tecnología puede resolver
-            problemas cotidianos...
+            Somos un equipo de estudiantes desarrollando una solución IoT
+            innovadora como parte de nuestro proyecto TIC.
           </p>
         </motion.div>
       </div>

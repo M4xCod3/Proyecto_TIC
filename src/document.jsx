@@ -1,5 +1,6 @@
 import React from 'react';
 import './index.css';
+import ETP from './ETP';
 
 
 export default function Document() {
@@ -17,8 +18,6 @@ export default function Document() {
 
       <ul>
         <li><a href="#ETP">Etapas del proyecto</a></li>
-        <li><a href="#LLD">Lluvia de ideas</a></li>
-        <li><a href="#IDI">Interpretación de la idea</a></li>
         <li><a href="#IMP">Implementación</a></li>
         <li><a href="#Cont">Construcción</a></li>
         <li><a href="#PB">Pruebas</a></li>
@@ -27,35 +26,44 @@ export default function Document() {
 
     {/* CONTENT */}
     <div className="document-content">
-      <section id="ETP">
-        <h3>Etapas del proyecto</h3>
-        <p>Aquí puedes explicar las etapas...</p>
-      </section>
 
-      <section id="LLD">
-        <h3>Lluvia de ideas</h3>
-        <p>Ideas iniciales del proyecto...</p>
-      </section>
+      <a href="/ETP.html" className="doc-card-button">
+        <section id="ETP">
+          <h3>Etapas del proyecto</h3>
+          <p>Explora el ciclo de vida de Log-Cold...</p>
+        </section>
+      </a>
+      
+      <a href="/IMP.html" className="doc-card-button">
+        <section id="IMP">
+          <h3>Implementación</h3>
+          <p>Conoce cómo articulamos el flujo de datos utilizando C++ 
+            para el firmware, el protocolo ESP-NOW para una red robusta 
+            sin dependencia de WiFi y la sincronización en tiempo real con
+            Supabase mediante HTTP.</p>
+        </section>
+      </a>
 
-      <section id="IDI">
-        <h3>Interpretación de la idea</h3>
-        <p>Cómo definieron la solución...</p>
-      </section>
+      <a href="/CONT.html" className="doc-card-button">
+        <section id="Cont">
+          <h3>Construcción</h3>
+          <p>Detalle del desarrollo físico del proyecto:
+             configuración de nodos sensores con ESP32 y DHT22,
+              integración del módulo GPS NEO-6M y el diseño del esquema 
+              de alimentación para garantizar portabilidad y autonomía energética.</p>
+        </section>
+      </a>
 
-      <section id="IMP">
-        <h3>Implementación</h3>
-        <p>Cómo lo desarrollaron...</p>
-      </section>
-
-      <section id="Cont">
-        <h3>Construcción</h3>
-        <p>Parte física o técnica...</p>
-      </section>
-
-      <section id="PB">
-        <h3>Pruebas</h3>
-        <p>Resultados y validación...</p>
-      </section>
+      <a href="/PB.html" className="doc-card-button">
+        <section id="PB">
+          <h3>Pruebas</h3>
+          <p>Revisión de los protocolos de prueba: 
+            validación de la precisión de telemetría, 
+            tiempos de latencia menores a 5 segundos y 
+            la confirmación de persistencia de datos (HTTP 201)
+            bajo condiciones de conectividad variable.</p>
+        </section>
+      </a>
     </div>
 
   </div>
