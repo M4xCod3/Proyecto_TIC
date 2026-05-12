@@ -662,3 +662,24 @@ body {
 .max-h-\[500px\]::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
+
+/* Esto quita el subrayado de los bloques de documentación */
+.doc-card-button {
+  text-decoration: none !important; /* Elimina la línea */
+  color: inherit;                  /* Mantiene tus colores de texto */
+  display: block;                  /* Mantiene el comportamiento de bloque */
+}
+
+/* También debemos quitarlo para los estados 'hover' y 'active' */
+.doc-card-button:hover, 
+.doc-card-button:focus, 
+.doc-card-button:active {
+  text-decoration: none !important;
+  outline: none;
+}
+
+/* Si los párrafos o títulos dentro heredan el subrayado, los limpiamos */
+.doc-card-button h3, 
+.doc-card-button p {
+  text-decoration: none !important;
+}

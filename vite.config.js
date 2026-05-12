@@ -10,6 +10,10 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         analytics: resolve(__dirname, 'analytics.html'),
+        ETP: resolve(__dirname, 'ETP.html'),
+        IMP: resolve(__dirname, 'IMP.html'),
+        CONT: resolve(__dirname, 'CONT.html'),
+        PB: resolve(__dirname, 'PB.html'),
       },
     },
   },

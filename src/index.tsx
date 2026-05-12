@@ -1,7 +1,5 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import Navbar from './Navbar';
-import Hero from './Hero';
 import About from './About';
 import Hardware from './Hardware';
 import Contact from './Contact';
@@ -45,8 +43,22 @@ export default function Index() {
           </p>
 
           <div className="buttons">
-            <button className="btn-primary">Descubrir el proyecto</button>
-            <button className="btn-outline">Contactar al equipo</button>
+            <button 
+              onClick={() => {
+                window.location.href = "#about"}
+            }
+            className="btn-primary"
+            >
+            Descubrir el proyecto
+            </button>
+            <button 
+              onClick={() => {
+                window.location.href = "#contact"}
+            }
+             className="btn-outline"
+            >
+              Contactar al equipo
+            </button>
           </div>
         </div>
       </div>
