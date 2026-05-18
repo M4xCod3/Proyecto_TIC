@@ -154,16 +154,6 @@ const styles = {
     alignItems: "center",
     flexWrap: "wrap" as const,
   } as React.CSSProperties,
-  filterInput: {
-    flex: 1,
-    backgroundColor: "#334155",
-    border: "1px solid #475569",
-    borderRadius: "8px",
-    padding: "8px 12px",
-    color: "#ffffff",
-    fontSize: "14px",
-    outline: "none",
-  } as React.CSSProperties,
   filterSelect: {
     backgroundColor: "#334155",
     border: "1px solid #475569",
@@ -173,17 +163,6 @@ const styles = {
     fontSize: "14px",
     outline: "none",
     cursor: "pointer",
-  } as React.CSSProperties,
-  filterButton: {
-    padding: "8px 16px",
-    backgroundColor: "#0891b2",
-    border: "none",
-    borderRadius: "8px",
-    color: "#ffffff",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
   } as React.CSSProperties,
   clearButton: {
     padding: "8px 16px",
@@ -317,7 +296,7 @@ const styles = {
     backgroundColor: "#1e293b",
     borderRadius: "8px",
     border: "1px solid #334155",
-    padding: "24px",
+    padding: "32px",
     textAlign: "center" as const,
   } as React.CSSProperties,
   pedidoInput: {
@@ -342,6 +321,11 @@ const styles = {
     marginTop: "16px",
     fontSize: "16px",
   } as React.CSSProperties,
+  errorText: {
+    color: "#f87171",
+    fontSize: "14px",
+    marginTop: "12px",
+  } as React.CSSProperties,
 };
 
 export default function Analytics() {
@@ -356,15 +340,14 @@ export default function Analytics() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
   
-  // Estados para filtros
-  const [filterPedidoId, setFilterPedidoId] = useState("");
-  const [availablePedidos, setAvailablePedidos] = useState<string[]>([]);
+  // Estado para el filtro de hardware
   const [filterHardwareId, setFilterHardwareId] = useState("");
   const [availableHardwareIds, setAvailableHardwareIds] = useState<string[]>([]);
   
   // Estado para controlar si ya se ingresó el número de pedido
   const [pedidoIngresado, setPedidoIngresado] = useState(false);
   const [numeroPedidoInput, setNumeroPedidoInput] = useState("");
+  const [pedidoError, setPedidoError] = useState("");
 
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
@@ -395,11 +378,8 @@ export default function Analytics() {
 
         const data = pedidos || [];
         setAllData(data);
-        setFilteredData(data);
         
-        const pedidoIds = [...new Set(data.map(item => item.id_pedido).filter(Boolean))] as string[];
-        setAvailablePedidos(pedidoIds);
-        
+        // Extraer Hardware IDs únicos
         const hardwareIds = [...new Set(data.map(item => item.hardware_id).filter(Boolean))] as string[];
         setAvailableHardwareIds(hardwareIds);
         
@@ -414,9 +394,6 @@ export default function Analytics() {
               const newRecord = payload.new as PedidoMonitoreo;
               setAllData(prev => {
                 const updated = [newRecord, ...prev].slice(0, 500);
-                if (newRecord.id_pedido && !pedidoIds.includes(newRecord.id_pedido)) {
-                  setAvailablePedidos(prevIds => [...new Set([...prevIds, newRecord.id_pedido!])]);
-                }
                 if (newRecord.hardware_id && !hardwareIds.includes(newRecord.hardware_id)) {
                   setAvailableHardwareIds(prevIds => [...new Set([...prevIds, newRecord.hardware_id])]);
                 }
@@ -438,20 +415,18 @@ export default function Analytics() {
     fetchData();
   }, []);
 
-  // Aplicar filtros cuando cambian
+  // Aplicar filtros cuando cambia el hardware filter
   useEffect(() => {
-    let filtered = [...allData];
+    if (!pedidoIngresado) return;
     
-    if (filterPedidoId) {
-      filtered = filtered.filter(item => item.id_pedido === filterPedidoId);
-    }
+    let filtered = allData.filter(item => item.id_pedido === numeroPedidoInput);
     
     if (filterHardwareId) {
       filtered = filtered.filter(item => item.hardware_id === filterHardwareId);
     }
     
     setFilteredData(filtered);
-  }, [allData, filterPedidoId, filterHardwareId]);
+  }, [allData, filterHardwareId, pedidoIngresado, numeroPedidoInput]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -459,10 +434,7 @@ export default function Analytics() {
 
   const handleSubmitPedido = () => {
     if (!numeroPedidoInput.trim()) {
-      setChatMessages(prev => [...prev, { 
-        role: "assistant", 
-        content: "Por favor, ingresa un número de pedido válido." 
-      }]);
+      setPedidoError("Por favor, ingresa un número de pedido.");
       return;
     }
     
@@ -470,20 +442,15 @@ export default function Analytics() {
     const pedidoExiste = allData.some(item => item.id_pedido === numeroPedidoInput);
     
     if (!pedidoExiste) {
-      setChatMessages(prev => [...prev, { 
-        role: "assistant", 
-        content: `No se encontró el pedido "${numeroPedidoInput}". Por favor, verifica el número e inténtalo nuevamente.` 
-      }]);
+      setPedidoError(`No se encontró el pedido "${numeroPedidoInput}". Verifica el número e inténtalo nuevamente.`);
       return;
     }
     
-    // Filtrar por el pedido ingresado
-    setFilterPedidoId(numeroPedidoInput);
+    setPedidoError("");
     setPedidoIngresado(true);
     
-    setChatMessages(prev => [...prev, 
-      { role: "user", content: `Mi número de pedido es: ${numeroPedidoInput}` },
-      { role: "assistant", content: `Perfecto! Ahora estoy monitoreando el pedido ${numeroPedidoInput}. Puedes consultarme sobre: estado, temperatura, humedad, ubicación, alertas, hardware. ¿Qué deseas saber?` }
+    setChatMessages([
+      { role: "assistant", content: `Hola! Soy el asistente de Log-Cold. Estás monitoreando el pedido ${numeroPedidoInput}. Puedes consultarme sobre: estado, temperatura, humedad, ubicación, alertas, hardware. ¿Qué deseas saber?` }
     ]);
   };
 
@@ -539,7 +506,6 @@ export default function Analytics() {
   };
 
   const clearFilters = () => {
-    setFilterPedidoId("");
     setFilterHardwareId("");
   };
 
@@ -604,6 +570,7 @@ export default function Analytics() {
                 placeholder="Ej: 1001"
                 style={styles.pedidoInput}
               />
+              {pedidoError && <p style={styles.errorText}>{pedidoError}</p>}
               <div>
                 <button onClick={handleSubmitPedido} style={styles.submitButton}>
                   Acceder al monitoreo
@@ -635,7 +602,40 @@ export default function Analytics() {
     );
   }
 
-  const hasActiveFilter = filterPedidoId || filterHardwareId;
+  if (filteredData.length === 0) {
+    return (
+      <div style={styles.container}>
+        <header style={styles.header}>
+          <div style={styles.headerContent}>
+            <div style={styles.headerLeft}>
+              <a href="/" style={styles.backButton}>
+                <ArrowLeftIcon style={{ width: 20, height: 20 }} />
+              </a>
+              <div>
+                <h1 style={styles.title}>Log-Cold Analytics</h1>
+                <p style={styles.subtitle}>Monitoreo en tiempo real - Pedido: {numeroPedidoInput}</p>
+              </div>
+            </div>
+            <div style={styles.statusBadge}>
+              <span style={styles.statusDot} />
+              <span style={{ fontSize: 14, color: "#4ade80" }}>Conectado</span>
+            </div>
+          </div>
+        </header>
+        <main style={{ ...styles.main, justifyContent: "center", alignItems: "center", minHeight: "calc(100vh - 80px)" }}>
+          <div style={styles.card}>
+            <div style={{ padding: "40px", textAlign: "center", color: "#94a3b8" }}>
+              <AlertTriangleIcon style={{ width: 48, height: 48, marginBottom: 16 }} />
+              <p>No hay registros para el pedido {numeroPedidoInput}</p>
+              <button onClick={() => window.location.reload()} style={{ ...styles.retryButton, marginTop: 16 }}>Volver a intentar</button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  const hasActiveFilter = filterHardwareId !== "";
 
   return (
     <div style={styles.container}>
@@ -647,7 +647,7 @@ export default function Analytics() {
             </a>
             <div>
               <h1 style={styles.title}>Log-Cold Analytics</h1>
-              <p style={styles.subtitle}>Monitoreo en tiempo real - Pedido: {filterPedidoId}</p>
+              <p style={styles.subtitle}>Monitoreo en tiempo real - Pedido: {numeroPedidoInput}</p>
             </div>
           </div>
           <div style={styles.statusBadge}>
@@ -659,7 +659,7 @@ export default function Analytics() {
 
       <main style={{ ...styles.main, ...(isDesktop ? styles.mainDesktop : {}) }}>
         <div style={styles.leftColumn}>
-          {/* Filtros */}
+          {/* Filtro solo por Hardware */}
           <div style={styles.card}>
             <div style={styles.cardHeader}>
               <SearchIcon style={{ width: 16, height: 16, color: "#22d3ee" }} />
@@ -677,135 +677,124 @@ export default function Analytics() {
                 ))}
               </select>
               
-              <button onClick={clearFilters} style={styles.clearButton}>
-                Limpiar filtros
-              </button>
+              {hasActiveFilter && (
+                <button onClick={clearFilters} style={styles.clearButton}>
+                  Limpiar filtro
+                </button>
+              )}
             </div>
             {hasActiveFilter && (
               <div style={{ padding: "0 12px 12px 12px" }}>
                 <div style={styles.filterInfo}>
-                  Mostrando {filteredData.length} de {allData.length} registros
-                  {filterHardwareId && ` · Hardware: ${filterHardwareId}`}
+                  Mostrando {filteredData.length} registros · Hardware: {filterHardwareId}
                 </div>
               </div>
             )}
           </div>
 
-          {/* Stats - solo mostrar si hay datos filtrados */}
-          {filteredData.length > 0 ? (
-            <>
-              <div style={{ ...styles.statsGrid, gridTemplateColumns: isDesktop ? "repeat(4, 1fr)" : "repeat(2, 1fr)" }}>
-                <div style={styles.statCard}>
-                  <div style={styles.statLabel}>
-                    <ThermometerIcon style={{ width: 16, height: 16 }} />
-                    <span>Temperatura</span>
-                  </div>
-                  <p style={{ ...styles.statValue, color: "#22d3ee" }}>{latestData.temperatura.toFixed(1)}°C</p>
-                </div>
-                <div style={styles.statCard}>
-                  <div style={styles.statLabel}>
-                    <DropletIcon style={{ width: 16, height: 16 }} />
-                    <span>Humedad</span>
-                  </div>
-                  <p style={{ ...styles.statValue, color: "#60a5fa" }}>{latestData.humedad.toFixed(1)}%</p>
-                </div>
-                <div style={styles.statCard}>
-                  <div style={styles.statLabel}>
-                    <MapPinIcon style={{ width: 16, height: 16 }} />
-                    <span>Ubicacion</span>
-                  </div>
-                  <p style={{ fontSize: 12, fontFamily: "monospace", color: "#4ade80" }}>
-                    {latestData.latitud.toFixed(4)}<br />{latestData.longitud.toFixed(4)}
-                  </p>
-                </div>
-                <div style={styles.statCard}>
-                  <div style={styles.statLabel}>
-                    {latestData.alerta === "OK" ? (
-                      <CheckCircleIcon style={{ width: 16, height: 16, color: "#4ade80" }} />
-                    ) : (
-                      <AlertTriangleIcon style={{ width: 16, height: 16, color: "#f87171" }} />
-                    )}
-                    <span>Estado</span>
-                  </div>
-                  <p style={{ ...styles.statValue, fontSize: 18, color: latestData.alerta === "OK" ? "#4ade80" : "#f87171" }}>
-                    {latestData.alerta}
-                  </p>
-                </div>
+          {/* Stats Grid */}
+          <div style={{ ...styles.statsGrid, gridTemplateColumns: isDesktop ? "repeat(4, 1fr)" : "repeat(2, 1fr)" }}>
+            <div style={styles.statCard}>
+              <div style={styles.statLabel}>
+                <ThermometerIcon style={{ width: 16, height: 16 }} />
+                <span>Temperatura</span>
               </div>
-
-              {/* Map */}
-              <div style={styles.card}>
-                <div style={styles.cardHeader}>
-                  <MapPinIcon style={{ width: 16, height: 16, color: "#22d3ee" }} />
-                  Ubicacion GPS
-                </div>
-                <div style={styles.mapContainer}>
-                  <iframe
-                    title="Mapa"
-                    width="100%"
-                    height="100%"
-                    frameBorder="0"
-                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${latestData.longitud - 0.01},${latestData.latitud - 0.01},${latestData.longitud + 0.01},${latestData.latitud + 0.01}&layer=mapnik&marker=${latestData.latitud},${latestData.longitud}`}
-                  />
-                </div>
-              </div>
-
-              {/* Table */}
-              <div style={styles.card}>
-                <div style={styles.cardHeader}>Historial de Datos</div>
-                <div style={styles.tableContainer}>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr>
-                        <th style={styles.th}>Fecha</th>
-                        <th style={styles.th}>Temp</th>
-                        <th style={styles.th}>Humedad</th>
-                        <th style={styles.th}>Ubicacion</th>
-                        <th style={styles.th}>Hardware ID</th>
-                        <th style={styles.th}>Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredData.map((row) => (
-                        <tr key={row.id}>
-                          <td style={styles.td}>{formatDate(row.created_at)}</td>
-                          <td style={{ ...styles.td, color: row.temperatura >= 2 && row.temperatura <= 8 ? "#22d3ee" : "#f87171" }}>
-                            {row.temperatura.toFixed(1)}°C
-                          </td>
-                          <td style={{ ...styles.td, color: row.humedad >= 60 && row.humedad <= 95 ? "#60a5fa" : "#fbbf24" }}>
-                            {row.humedad.toFixed(1)}%
-                          </td>
-                          <td style={{ ...styles.td, fontFamily: "monospace", fontSize: 12, color: "#94a3b8" }}>
-                            {row.latitud.toFixed(4)}, {row.longitud.toFixed(4)}
-                          </td>
-                          <td style={{ ...styles.td, fontFamily: "monospace", fontSize: 12, color: "#94a3b8" }}>
-                            {row.hardware_id}
-                          </td>
-                          <td style={styles.td}>
-                            <span style={{
-                              ...styles.badge,
-                              backgroundColor: row.alerta === "OK" ? "rgba(74, 222, 128, 0.2)" : "rgba(248, 113, 113, 0.2)",
-                              color: row.alerta === "OK" ? "#4ade80" : "#f87171",
-                            }}>
-                              {row.alerta}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div style={styles.card}>
-              <div style={{ padding: "40px", textAlign: "center", color: "#94a3b8" }}>
-                <AlertTriangleIcon style={{ width: 48, height: 48, marginBottom: 16 }} />
-                <p>No hay registros para los filtros seleccionados</p>
-                <button onClick={clearFilters} style={{ ...styles.retryButton, marginTop: 16 }}>Limpiar filtros</button>
-              </div>
+              <p style={{ ...styles.statValue, color: "#22d3ee" }}>{latestData.temperatura.toFixed(1)}°C</p>
             </div>
-          )}
+            <div style={styles.statCard}>
+              <div style={styles.statLabel}>
+                <DropletIcon style={{ width: 16, height: 16 }} />
+                <span>Humedad</span>
+              </div>
+              <p style={{ ...styles.statValue, color: "#60a5fa" }}>{latestData.humedad.toFixed(1)}%</p>
+            </div>
+            <div style={styles.statCard}>
+              <div style={styles.statLabel}>
+                <MapPinIcon style={{ width: 16, height: 16 }} />
+                <span>Ubicacion</span>
+              </div>
+              <p style={{ fontSize: 12, fontFamily: "monospace", color: "#4ade80" }}>
+                {latestData.latitud.toFixed(4)}<br />{latestData.longitud.toFixed(4)}
+              </p>
+            </div>
+            <div style={styles.statCard}>
+              <div style={styles.statLabel}>
+                {latestData.alerta === "OK" ? (
+                  <CheckCircleIcon style={{ width: 16, height: 16, color: "#4ade80" }} />
+                ) : (
+                  <AlertTriangleIcon style={{ width: 16, height: 16, color: "#f87171" }} />
+                )}
+                <span>Estado</span>
+              </div>
+              <p style={{ ...styles.statValue, fontSize: 18, color: latestData.alerta === "OK" ? "#4ade80" : "#f87171" }}>
+                {latestData.alerta}
+              </p>
+            </div>
+          </div>
+
+          {/* Mapa */}
+          <div style={styles.card}>
+            <div style={styles.cardHeader}>
+              <MapPinIcon style={{ width: 16, height: 16, color: "#22d3ee" }} />
+              Ubicacion GPS
+            </div>
+            <div style={styles.mapContainer}>
+              <iframe
+                title="Mapa"
+                width="100%"
+                height="100%"
+                frameBorder="0"
+                src={`https://www.openstreetmap.org/export/embed.html?bbox=${latestData.longitud - 0.01},${latestData.latitud - 0.01},${latestData.longitud + 0.01},${latestData.latitud + 0.01}&layer=mapnik&marker=${latestData.latitud},${latestData.longitud}`}
+              />
+            </div>
+          </div>
+
+          {/* Tabla de historial */}
+          <div style={styles.card}>
+            <div style={styles.cardHeader}>Historial de Datos</div>
+            <div style={styles.tableContainer}>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>Fecha</th>
+                    <th style={styles.th}>Temp</th>
+                    <th style={styles.th}>Humedad</th>
+                    <th style={styles.th}>Ubicacion</th>
+                    <th style={styles.th}>Hardware ID</th>
+                    <th style={styles.th}>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredData.map((row) => (
+                    <tr key={row.id}>
+                      <td style={styles.td}>{formatDate(row.created_at)}</td>
+                      <td style={{ ...styles.td, color: row.temperatura >= 2 && row.temperatura <= 8 ? "#22d3ee" : "#f87171" }}>
+                        {row.temperatura.toFixed(1)}°C
+                      </td>
+                      <td style={{ ...styles.td, color: row.humedad >= 60 && row.humedad <= 95 ? "#60a5fa" : "#fbbf24" }}>
+                        {row.humedad.toFixed(1)}%
+                      </td>
+                      <td style={{ ...styles.td, fontFamily: "monospace", fontSize: 12, color: "#94a3b8" }}>
+                        {row.latitud.toFixed(4)}, {row.longitud.toFixed(4)}
+                      </td>
+                      <td style={{ ...styles.td, fontFamily: "monospace", fontSize: 12, color: "#94a3b8" }}>
+                        {row.hardware_id}
+                      </td>
+                      <td style={styles.td}>
+                        <span style={{
+                          ...styles.badge,
+                          backgroundColor: row.alerta === "OK" ? "rgba(74, 222, 128, 0.2)" : "rgba(248, 113, 113, 0.2)",
+                          color: row.alerta === "OK" ? "#4ade80" : "#f87171",
+                        }}>
+                          {row.alerta}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         {/* Chat */}
@@ -813,11 +802,9 @@ export default function Analytics() {
           <div style={styles.cardHeader}>
             <BotIcon style={{ width: 20, height: 20, color: "#22d3ee" }} />
             Asistente Log-Cold
-            {filterPedidoId && (
-              <span style={{ fontSize: 12, backgroundColor: "#0891b2", padding: "2px 8px", borderRadius: 12, marginLeft: 8 }}>
-                Pedido: {filterPedidoId}
-              </span>
-            )}
+            <span style={{ fontSize: 12, backgroundColor: "#0891b2", padding: "2px 8px", borderRadius: 12, marginLeft: 8 }}>
+              Pedido: {numeroPedidoInput}
+            </span>
           </div>
           <div style={styles.chatMessages}>
             {chatMessages.map((msg, i) => (
