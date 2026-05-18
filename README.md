@@ -43,23 +43,39 @@ PROYECTO_TIC/
 │   ├── ui/
 │   │
 │   ├── About.tsx
+│   ├── Analytics.tsx
+│   ├── AnalyticsPage.tsx
 │   ├── App.css
 │   ├── App.jsx
+│   ├── CONT.tsx
 │   ├── Contact.tsx
+│   ├── CONTpage.tsx
+│   ├── declarations.d.ts
 │   ├── document.jsx
+│   ├── ETP.tsx
+│   ├── ETPpage.tsx
 │   ├── Footer.tsx
 │   ├── Hardware.tsx
 │   ├── Hero.tsx
+│   ├── IMP.tsx
+│   ├── IMPpage.tsx
 │   ├── index.css
 │   ├── index.tsx
 │   ├── main.jsx
-│   └── Navbar.tsx
-│
+│   ├── Navbar.tsx
+│   ├── PB.tsx
+│   └── PBpage.tsx
+│   
 ├── .gitignore
+├── analytics.html
+├── CONT.html
 ├── eslint.config.js
+├── ETP.html
+├── IMP.html
 ├── index.html
 ├── package.json
 ├── package-lock.json
+├── PB.html
 ├── README.md
 └── vite.config.js
 ```
