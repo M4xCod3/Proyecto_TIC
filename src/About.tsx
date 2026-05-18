@@ -75,7 +75,6 @@ export default function About() {
   <div className="about-container">
     <div className="about-grid">
       
-      {/* LEFT */}
       <div ref={ref}>
         <motion.div
           initial={{ opacity: 0, x: -30 }}
@@ -106,7 +105,6 @@ export default function About() {
         </motion.div>
       </div>
 
-      {/* RIGHT */}
       <div className="about-cards">
         {features.map((feat, i) => (
           <FeatureCard key={feat.title} {...feat} index={i} />

@@ -63,7 +63,6 @@ export default function Index() {
         </div>
       </div>
 
-      {/* 👇 AHORA SÍ SE MUESTRAN */}
       <div id="about">
         <About />
       </div>
@@ -84,7 +83,7 @@ export default function Index() {
     </>
   );
 }
-// ESTO ES LO QUE FALTA PARA QUE NO SALGA EN BLANCO:
+
 const rootElement = document.getElementById('root');
 
 if (rootElement) {

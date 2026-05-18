@@ -47,7 +47,6 @@ export default function Contact() {
       return;
     }
     setLoading(true);
-    // Simulate form submission delay
     await new Promise((r) => setTimeout(r, 1200));
     setLoading(false);
     setSubmitted(true);
@@ -58,7 +57,6 @@ export default function Contact() {
     <section id="contact" className="contact-section">
   <div className="contact-container">
 
-    {/* Header */}
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
@@ -83,7 +81,6 @@ export default function Contact() {
 
     <div className="contact-grid">
 
-      {/* LEFT */}
       <div className="contact-left">
         <div className="contact-box">
           <h3>Equipo del proyecto</h3>
@@ -106,7 +103,6 @@ export default function Contact() {
         </div>
       </div>
 
-      {/* RIGHT */}
       <div className="contact-right">
         {submitted ? (
           <div className="contact-success">
