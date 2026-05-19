@@ -11,6 +11,7 @@ import {
   RefreshCwIcon,
   ArrowLeftIcon,
   SearchIcon,
+  PackageIcon,
 } from "lucide-react";
 
 interface PedidoMonitoreo {
@@ -22,7 +23,7 @@ interface PedidoMonitoreo {
   humedad: number;
   alerta: string;
   hardware_id: string;
-  id_pedido?: string; // Agregado campo id_pedido
+  id_pedido?: string;
 }
 
 interface ChatMessage {
@@ -69,6 +70,9 @@ const styles = {
     color: "#ffffff",
     cursor: "pointer",
     borderRadius: "8px",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
   } as React.CSSProperties,
   title: {
     fontSize: "20px",
@@ -91,6 +95,7 @@ const styles = {
     height: "8px",
     backgroundColor: "#4ade80",
     borderRadius: "50%",
+    boxShadow: "0 0 8px #4ade80",
   } as React.CSSProperties,
   main: {
     maxWidth: "1200px",
@@ -145,56 +150,12 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-  } as React.CSSProperties,
-  filterContainer: {
-    padding: "12px",
-    borderBottom: "1px solid #334155",
-    display: "flex",
-    gap: "12px",
-    alignItems: "center",
-    flexWrap: "wrap" as const,
-  } as React.CSSProperties,
-  filterInput: {
-    flex: 1,
-    backgroundColor: "#334155",
-    border: "1px solid #475569",
-    borderRadius: "8px",
-    padding: "8px 12px",
-    color: "#ffffff",
-    fontSize: "14px",
-    outline: "none",
-  } as React.CSSProperties,
-  filterSelect: {
-    backgroundColor: "#334155",
-    border: "1px solid #475569",
-    borderRadius: "8px",
-    padding: "8px 12px",
-    color: "#ffffff",
-    fontSize: "14px",
-    outline: "none",
-    cursor: "pointer",
-  } as React.CSSProperties,
-  filterButton: {
-    padding: "8px 16px",
-    backgroundColor: "#0891b2",
-    border: "none",
-    borderRadius: "8px",
-    color: "#ffffff",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  } as React.CSSProperties,
-  clearButton: {
-    padding: "8px 16px",
-    backgroundColor: "#475569",
-    border: "none",
-    borderRadius: "8px",
-    color: "#ffffff",
-    cursor: "pointer",
+    backgroundColor: "#1e293b",
   } as React.CSSProperties,
   mapContainer: {
-    height: "300px",
+    height: "350px",
+    width: "100%",
+    backgroundColor: "#334155",
   } as React.CSSProperties,
   tableContainer: {
     overflowX: "auto" as const,
@@ -212,6 +173,7 @@ const styles = {
     textAlign: "left" as const,
     position: "sticky" as const,
     top: 0,
+    zIndex: 10,
   } as React.CSSProperties,
   td: {
     padding: "8px 12px",
@@ -223,7 +185,7 @@ const styles = {
     border: "1px solid #334155",
     display: "flex",
     flexDirection: "column" as const,
-    height: "500px",
+    height: "600px",
   } as React.CSSProperties,
   chatMessages: {
     flex: 1,
@@ -289,49 +251,71 @@ const styles = {
   } as React.CSSProperties,
   centerContent: {
     textAlign: "center" as const,
-    padding: "24px",
-    maxWidth: "400px",
+    padding: "32px",
+    maxWidth: "450px",
+    width: "100%",
   } as React.CSSProperties,
-  retryButton: {
-    padding: "8px 16px",
+  searchBox: {
+    backgroundColor: "#1e293b",
+    padding: "32px",
+    borderRadius: "12px",
+    border: "1px solid #334155",
+    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5)",
+  } as React.CSSProperties,
+  searchTitle: {
+    fontSize: "24px",
+    fontWeight: "bold",
+    marginBottom: "8px",
+    color: "#ffffff",
+  } as React.CSSProperties,
+  searchInput: {
+    width: "100%",
+    backgroundColor: "#0f172a",
+    border: "1px solid #475569",
+    borderRadius: "8px",
+    padding: "12px 16px",
+    color: "#ffffff",
+    fontSize: "16px",
+    marginTop: "24px",
+    marginBottom: "16px",
+    outline: "none",
+    boxSizing: "border-box" as const,
+  } as React.CSSProperties,
+  searchMainButton: {
+    width: "100%",
+    padding: "12px",
     backgroundColor: "#0891b2",
     border: "none",
     borderRadius: "8px",
     color: "#ffffff",
+    fontSize: "16px",
+    fontWeight: "bold",
     cursor: "pointer",
-    marginTop: "16px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "8px",
+    transition: "background-color 0.2s",
   } as React.CSSProperties,
   badge: {
     padding: "2px 8px",
     borderRadius: "4px",
     fontSize: "12px",
   } as React.CSSProperties,
-  filterInfo: {
-    padding: "8px 12px",
-    backgroundColor: "#334155",
-    borderRadius: "8px",
-    fontSize: "13px",
-    color: "#94a3b8",
-  } as React.CSSProperties,
 };
 
 export default function Analytics() {
-  const [allData, setAllData] = useState<PedidoMonitoreo[]>([]);
-  const [filteredData, setFilteredData] = useState<PedidoMonitoreo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [activePedidoId, setActivePedidoId] = useState<string>("");
+  const [searchInput, setSearchInput] = useState<string>("");
+  
+  const [data, setData] = useState<PedidoMonitoreo[]>([]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    { role: "assistant", content: "Hola! Soy el asistente de Log-Cold. Puedo informarte sobre el estado actual de tu pedido. Preguntame lo que necesites." }
-  ]);
+  
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
-  
-  // Estados para filtros
-  const [filterPedidoId, setFilterPedidoId] = useState("");
-  const [availablePedidos, setAvailablePedidos] = useState<string[]>([]);
-  const [filterHardwareId, setFilterHardwareId] = useState("");
-  const [availableHardwareIds, setAvailableHardwareIds] = useState<string[]>([]);
 
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
@@ -339,8 +323,14 @@ export default function Analytics() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Efecto principal que carga los datos SOLO cuando hay un ID activo
   useEffect(() => {
+    if (!activePedidoId) return;
+
     const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      
       if (!supabase) {
         setError("Supabase no configurado");
         setLoading(false);
@@ -348,9 +338,11 @@ export default function Analytics() {
       }
 
       try {
+        // Consultamos solo los datos del pedido ingresado
         const { data: pedidos, error: queryError } = await supabase
           .from("pedidos_monitoreo")
           .select("*")
+          .eq("id_pedido", activePedidoId)
           .order("created_at", { ascending: false })
           .limit(500);
 
@@ -360,38 +352,29 @@ export default function Analytics() {
           return;
         }
 
-        const data = pedidos || [];
-        setAllData(data);
-        setFilteredData(data);
+        setData(pedidos || []);
         
-        // Extraer IDs de pedido únicos
-        const pedidoIds = [...new Set(data.map(item => item.id_pedido).filter(Boolean))] as string[];
-        setAvailablePedidos(pedidoIds);
-        
-        // Extraer Hardware IDs únicos
-        const hardwareIds = [...new Set(data.map(item => item.hardware_id).filter(Boolean))] as string[];
-        setAvailableHardwareIds(hardwareIds);
+        // Mensaje de bienvenida del chat personalizado
+        setChatMessages([
+          { role: "assistant", content: `Hola! Soy el asistente de Log-Cold. Estoy monitoreando el pedido #${activePedidoId}. ¿Qué necesitas saber?` }
+        ]);
         
         setLoading(false);
 
+        // Suscripción en tiempo real solo para este pedido específico
         const channel = supabase
-          .channel("pedidos_realtime")
+          .channel(`pedido_realtime_${activePedidoId}`)
           .on(
             "postgres_changes",
-            { event: "INSERT", schema: "public", table: "pedidos_monitoreo" },
+            { 
+              event: "INSERT", 
+              schema: "public", 
+              table: "pedidos_monitoreo",
+              filter: `id_pedido=eq.${activePedidoId}`
+            },
             (payload) => {
               const newRecord = payload.new as PedidoMonitoreo;
-              setAllData(prev => {
-                const updated = [newRecord, ...prev].slice(0, 500);
-                // Actualizar listas de IDs disponibles
-                if (newRecord.id_pedido && !pedidoIds.includes(newRecord.id_pedido)) {
-                  setAvailablePedidos(prevIds => [...new Set([...prevIds, newRecord.id_pedido!])]);
-                }
-                if (newRecord.hardware_id && !hardwareIds.includes(newRecord.hardware_id)) {
-                  setAvailableHardwareIds(prevIds => [...new Set([...prevIds, newRecord.hardware_id])]);
-                }
-                return updated;
-              });
+              setData(prev => [newRecord, ...prev].slice(0, 500));
             }
           )
           .subscribe();
@@ -406,40 +389,37 @@ export default function Analytics() {
     };
 
     fetchData();
-  }, []);
-
-  // Aplicar filtros cuando cambian
-  useEffect(() => {
-    let filtered = [...allData];
-    
-    if (filterPedidoId) {
-      filtered = filtered.filter(item => item.id_pedido === filterPedidoId);
-    }
-    
-    if (filterHardwareId) {
-      filtered = filtered.filter(item => item.hardware_id === filterHardwareId);
-    }
-    
-    setFilteredData(filtered);
-  }, [allData, filterPedidoId, filterHardwareId]);
+  }, [activePedidoId]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
-  const latestData = filteredData[0];
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchInput.trim()) {
+      setActivePedidoId(searchInput.trim());
+    }
+  };
+
+  const handleReset = () => {
+    setActivePedidoId("");
+    setSearchInput("");
+    setData([]);
+    setChatMessages([]);
+  };
 
   const analyzeData = () => {
-    if (filteredData.length === 0) return null;
-    const latest = filteredData[0];
-    const avgTemp = filteredData.reduce((sum, d) => sum + d.temperatura, 0) / filteredData.length;
-    const avgHum = filteredData.reduce((sum, d) => sum + d.humedad, 0) / filteredData.length;
-    const alertCount = filteredData.filter(d => d.alerta !== "OK").length;
+    if (data.length === 0) return null;
+    const latest = data[0];
+    const avgTemp = data.reduce((sum, d) => sum + d.temperatura, 0) / data.length;
+    const avgHum = data.reduce((sum, d) => sum + d.humedad, 0) / data.length;
+    const alertCount = data.filter(d => d.alerta !== "OK").length;
     let status = "OPTIMO";
     if (latest.temperatura < 2 || latest.temperatura > 8) status = "ALERTA TEMPERATURA";
     if (latest.humedad < 60 || latest.humedad > 95) status = "ALERTA HUMEDAD";
     if (latest.alerta !== "OK") status = "ALERTA ACTIVA";
-    return { status, latest, avgTemp, avgHum, alertCount, total: filteredData.length };
+    return { status, latest, avgTemp, avgHum, alertCount, total: data.length };
   };
 
   const handleSendMessage = () => {
@@ -454,48 +434,79 @@ export default function Analytics() {
       const analysis = analyzeData();
 
       if (!analysis) {
-        response = filteredData.length === 0 
-          ? "No hay datos disponibles para el pedido seleccionado."
-          : "No hay datos disponibles.";
+        response = "No hay datos disponibles para este pedido aún.";
       } else {
         if (lowerMsg.includes("estado") || lowerMsg.includes("como")) {
-          response = `Estado: ${analysis.status}\nTemp: ${analysis.latest.temperatura.toFixed(1)}C\nHumedad: ${analysis.latest.humedad.toFixed(1)}%\nUbicacion: ${analysis.latest.latitud.toFixed(4)}, ${analysis.latest.longitud.toFixed(4)}\nHardware ID: ${analysis.latest.hardware_id}\nPedido ID: ${analysis.latest.id_pedido || "N/A"}`;
+          response = `Estado: ${analysis.status}\nTemp: ${analysis.latest.temperatura.toFixed(1)}C\nHumedad: ${analysis.latest.humedad.toFixed(1)}%\nUbicacion: ${analysis.latest.latitud.toFixed(4)}, ${analysis.latest.longitud.toFixed(4)}`;
         } else if (lowerMsg.includes("temp")) {
-          response = `Temperatura actual: ${analysis.latest.temperatura.toFixed(1)}C\nPromedio: ${analysis.avgTemp.toFixed(1)}C\nRango optimo: 2-8C`;
+          response = `Temperatura actual: ${analysis.latest.temperatura.toFixed(1)}C\nPromedio del viaje: ${analysis.avgTemp.toFixed(1)}C\nRango optimo: 2-8C`;
         } else if (lowerMsg.includes("hum")) {
-          response = `Humedad actual: ${analysis.latest.humedad.toFixed(1)}%\nPromedio: ${analysis.avgHum.toFixed(1)}%\nRango optimo: 60-95%`;
+          response = `Humedad actual: ${analysis.latest.humedad.toFixed(1)}%\nPromedio del viaje: ${analysis.avgHum.toFixed(1)}%\nRango optimo: 60-95%`;
         } else if (lowerMsg.includes("ubic") || lowerMsg.includes("gps") || lowerMsg.includes("donde")) {
-          response = `Ubicacion GPS:\nLat: ${analysis.latest.latitud.toFixed(6)}\nLon: ${analysis.latest.longitud.toFixed(6)}`;
-        } else if (lowerMsg.includes("alerta")) {
-          response = analysis.alertCount > 0 ? `Hay ${analysis.alertCount} alertas en ${analysis.total} lecturas.` : "No hay alertas activas.";
-        } else if (lowerMsg.includes("hardware")) {
-          response = `Hardware ID: ${analysis.latest.hardware_id}`;
-        } else if (lowerMsg.includes("pedido")) {
-          response = `ID del Pedido: ${analysis.latest.id_pedido || "No asignado"}`;
+          response = `Ubicacion GPS actual:\nLat: ${analysis.latest.latitud.toFixed(6)}\nLon: ${analysis.latest.longitud.toFixed(6)}`;
+        } else if (lowerMsg.includes("alerta") || lowerMsg.includes("problema")) {
+          response = analysis.alertCount > 0 ? `Se han registrado ${analysis.alertCount} alertas térmicas en este trayecto.` : "El trayecto se ha mantenido sin alertas, todo OK.";
         } else {
-          response = "Pregunta sobre: estado, temperatura, humedad, ubicacion, alertas, hardware, pedido";
+          response = "Puedo informarte sobre: estado general, temperatura, humedad, ubicación GPS o alertas del pedido.";
         }
       }
       setChatMessages(prev => [...prev, { role: "assistant", content: response }]);
-    }, 300);
-  };
-
-  const clearFilters = () => {
-    setFilterPedidoId("");
-    setFilterHardwareId("");
+    }, 400);
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+    return new Date(dateStr).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
   };
 
+  // 1. PANTALLA DE INGRESO (Login del Tracking)
+  if (!activePedidoId) {
+    return (
+      <div style={styles.centerScreen}>
+        <div style={styles.centerContent}>
+          <div style={styles.searchBox}>
+            <PackageIcon style={{ width: 48, height: 48, color: "#22d3ee", margin: "0 auto 16px" }} />
+            <h2 style={styles.searchTitle}>Tracking Log-Cold</h2>
+            <p style={{ color: "#94a3b8", fontSize: "14px", margin: 0 }}>
+              Ingresa el identificador de tu paquete para monitorear la cadena de frío en tiempo real.
+            </p>
+            
+            <form onSubmit={handleSearchSubmit}>
+              <input
+                type="text"
+                placeholder="Ej: 1001"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                style={styles.searchInput}
+                autoFocus
+              />
+              <button 
+                type="submit" 
+                style={{
+                  ...styles.searchMainButton,
+                  opacity: searchInput.trim() ? 1 : 0.5,
+                  cursor: searchInput.trim() ? "pointer" : "not-allowed"
+                }}
+                disabled={!searchInput.trim()}
+              >
+                <SearchIcon style={{ width: 20, height: 20 }} />
+                Rastrear Pedido
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // PANTALLAS DE CARGA Y ERROR PARA EL DASHBOARD
   if (loading) {
     return (
       <div style={styles.centerScreen}>
         <div style={styles.centerContent}>
-          <RefreshCwIcon style={{ width: 48, height: 48, color: "#22d3ee", animation: "spin 1s linear infinite" }} />
-          <p style={{ color: "#94a3b8", marginTop: 16 }}>Cargando datos...</p>
+          <RefreshCwIcon style={{ width: 48, height: 48, color: "#22d3ee", animation: "spin 1s linear infinite", margin: "0 auto" }} />
+          <p style={{ color: "#94a3b8", marginTop: 16 }}>Sincronizando telemetría del pedido #{activePedidoId}...</p>
         </div>
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
@@ -504,235 +515,162 @@ export default function Analytics() {
     return (
       <div style={styles.centerScreen}>
         <div style={styles.centerContent}>
-          <AlertTriangleIcon style={{ width: 48, height: 48, color: "#f87171" }} />
-          <h2 style={{ margin: "16px 0 8px" }}>Error</h2>
+          <AlertTriangleIcon style={{ width: 48, height: 48, color: "#f87171", margin: "0 auto" }} />
+          <h2 style={{ margin: "16px 0 8px" }}>Error de Conexión</h2>
           <p style={{ color: "#94a3b8" }}>{error}</p>
-          <button onClick={() => window.location.reload()} style={styles.retryButton}>Reintentar</button>
+          <button onClick={handleReset} style={{...styles.searchMainButton, marginTop: "24px"}}>Volver al inicio</button>
         </div>
       </div>
     );
   }
 
-  if (allData.length === 0) {
+  if (data.length === 0) {
     return (
       <div style={styles.centerScreen}>
         <div style={styles.centerContent}>
-          <AlertTriangleIcon style={{ width: 48, height: 48, color: "#fbbf24" }} />
-          <h2 style={{ margin: "16px 0 8px" }}>Sin datos en tiempo real</h2>
-          <p style={{ color: "#94a3b8" }}>No hay datos de telemetria disponibles.</p>
-          <button onClick={() => window.location.reload()} style={styles.retryButton}>Reintentar</button>
+          <PackageIcon style={{ width: 48, height: 48, color: "#fbbf24", margin: "0 auto" }} />
+          <h2 style={{ margin: "16px 0 8px" }}>Pedido No Encontrado</h2>
+          <p style={{ color: "#94a3b8" }}>No hemos recibido datos de telemetría para el pedido <strong>#{activePedidoId}</strong>. Asegúrate de que el Gateway esté encendido y transmitiendo.</p>
+          <button onClick={handleReset} style={{...styles.searchMainButton, marginTop: "24px"}}>Buscar otro pedido</button>
         </div>
       </div>
     );
   }
 
-  const hasActiveFilter = filterPedidoId || filterHardwareId;
+  // 2. DASHBOARD PRINCIPAL (Con datos)
+  const latestData = data[0];
 
   return (
     <div style={styles.container}>
       <header style={styles.header}>
         <div style={styles.headerContent}>
           <div style={styles.headerLeft}>
-            <a href="/" style={styles.backButton}>
+            <button onClick={handleReset} style={styles.backButton} title="Buscar otro pedido">
               <ArrowLeftIcon style={{ width: 20, height: 20 }} />
-            </a>
+            </button>
             <div>
-              <h1 style={styles.title}>Log-Cold Analytics</h1>
-              <p style={styles.subtitle}>Monitoreo en tiempo real</p>
+              <h1 style={styles.title}>Pedido #{activePedidoId}</h1>
+              <p style={styles.subtitle}>Log-Cold Tracking System</p>
             </div>
           </div>
           <div style={styles.statusBadge}>
             <span style={styles.statusDot} />
-            <span style={{ fontSize: 14, color: "#4ade80" }}>Conectado</span>
+            <span style={{ fontSize: 14, color: "#4ade80", fontWeight: 600 }}>En Tránsito</span>
           </div>
         </div>
       </header>
 
       <main style={{ ...styles.main, ...(isDesktop ? styles.mainDesktop : {}) }}>
         <div style={styles.leftColumn}>
-          {/* Filtros */}
-          <div style={styles.card}>
-            <div style={styles.cardHeader}>
-              <SearchIcon style={{ width: 16, height: 16, color: "#22d3ee" }} />
-              Filtrar por Pedido / Hardware
-            </div>
-            <div style={styles.filterContainer}>
-              <select
-                value={filterPedidoId}
-                onChange={(e) => setFilterPedidoId(e.target.value)}
-                style={styles.filterSelect}
-              >
-                <option value="">Todos los pedidos</option>
-                {availablePedidos.map(pid => (
-                  <option key={pid} value={pid}>{pid}</option>
-                ))}
-              </select>
-              
-              <select
-                value={filterHardwareId}
-                onChange={(e) => setFilterHardwareId(e.target.value)}
-                style={styles.filterSelect}
-              >
-                <option value="">Todos los hardware</option>
-                {availableHardwareIds.map(hid => (
-                  <option key={hid} value={hid}>{hid}</option>
-                ))}
-              </select>
-              
-              <button onClick={clearFilters} style={styles.clearButton}>
-                Limpiar filtros
-              </button>
-            </div>
-            {hasActiveFilter && (
-              <div style={{ padding: "0 12px 12px 12px" }}>
-                <div style={styles.filterInfo}>
-                  Mostrando {filteredData.length} de {allData.length} registros
-                  {filterPedidoId && ` · Pedido: ${filterPedidoId}`}
-                  {filterHardwareId && ` · Hardware: ${filterHardwareId}`}
-                </div>
+          
+          {/* Stats Principales */}
+          <div style={{ ...styles.statsGrid, gridTemplateColumns: isDesktop ? "repeat(4, 1fr)" : "repeat(2, 1fr)" }}>
+            <div style={styles.statCard}>
+              <div style={styles.statLabel}>
+                <ThermometerIcon style={{ width: 16, height: 16 }} />
+                <span>Temperatura</span>
               </div>
-            )}
+              <p style={{ ...styles.statValue, color: "#22d3ee" }}>{latestData.temperatura.toFixed(1)}°C</p>
+            </div>
+            <div style={styles.statCard}>
+              <div style={styles.statLabel}>
+                <DropletIcon style={{ width: 16, height: 16 }} />
+                <span>Humedad</span>
+              </div>
+              <p style={{ ...styles.statValue, color: "#60a5fa" }}>{latestData.humedad.toFixed(1)}%</p>
+            </div>
+            <div style={styles.statCard}>
+              <div style={styles.statLabel}>
+                <MapPinIcon style={{ width: 16, height: 16 }} />
+                <span>Ubicación GPS</span>
+              </div>
+              <p style={{ fontSize: 12, fontFamily: "monospace", color: "#e2e8f0", marginTop: "4px" }}>
+                {latestData.latitud.toFixed(4)}<br />{latestData.longitud.toFixed(4)}
+              </p>
+            </div>
+            <div style={styles.statCard}>
+              <div style={styles.statLabel}>
+                {latestData.alerta === "OK" ? (
+                  <CheckCircleIcon style={{ width: 16, height: 16, color: "#4ade80" }} />
+                ) : (
+                  <AlertTriangleIcon style={{ width: 16, height: 16, color: "#f87171" }} />
+                )}
+                <span>Cadena de Frío</span>
+              </div>
+              <p style={{ ...styles.statValue, fontSize: 18, color: latestData.alerta === "OK" ? "#4ade80" : "#f87171" }}>
+                {latestData.alerta}
+              </p>
+            </div>
           </div>
 
-          {/* Stats - solo mostrar si hay datos filtrados */}
-          {filteredData.length > 0 ? (
-            <>
-              <div style={{ ...styles.statsGrid, gridTemplateColumns: isDesktop ? "repeat(4, 1fr)" : "repeat(2, 1fr)" }}>
-                <div style={styles.statCard}>
-                  <div style={styles.statLabel}>
-                    <ThermometerIcon style={{ width: 16, height: 16 }} />
-                    <span>Temperatura</span>
-                  </div>
-                  <p style={{ ...styles.statValue, color: "#22d3ee" }}>{latestData.temperatura.toFixed(1)}°C</p>
-                </div>
-                <div style={styles.statCard}>
-                  <div style={styles.statLabel}>
-                    <DropletIcon style={{ width: 16, height: 16 }} />
-                    <span>Humedad</span>
-                  </div>
-                  <p style={{ ...styles.statValue, color: "#60a5fa" }}>{latestData.humedad.toFixed(1)}%</p>
-                </div>
-                <div style={styles.statCard}>
-                  <div style={styles.statLabel}>
-                    <MapPinIcon style={{ width: 16, height: 16 }} />
-                    <span>Ubicacion</span>
-                  </div>
-                  <p style={{ fontSize: 12, fontFamily: "monospace", color: "#4ade80" }}>
-                    {latestData.latitud.toFixed(4)}<br />{latestData.longitud.toFixed(4)}
-                  </p>
-                </div>
-                <div style={styles.statCard}>
-                  <div style={styles.statLabel}>
-                    {latestData.alerta === "OK" ? (
-                      <CheckCircleIcon style={{ width: 16, height: 16, color: "#4ade80" }} />
-                    ) : (
-                      <AlertTriangleIcon style={{ width: 16, height: 16, color: "#f87171" }} />
-                    )}
-                    <span>Estado</span>
-                  </div>
-                  <p style={{ ...styles.statValue, fontSize: 18, color: latestData.alerta === "OK" ? "#4ade80" : "#f87171" }}>
-                    {latestData.alerta}
-                  </p>
-                </div>
-              </div>
-
-              {/* Información adicional de IDs */}
-              <div style={styles.card}>
-                <div style={{ ...styles.cardHeader, gap: "16px" }}>
-                  <div><span style={{ color: "#94a3b8" }}>Hardware ID:</span> <strong>{latestData.hardware_id}</strong></div>
-                  <div><span style={{ color: "#94a3b8" }}>Pedido ID:</span> <strong>{latestData.id_pedido || "No asignado"}</strong></div>
-                </div>
-              </div>
-
-              {/* Map */}
-              <div style={styles.card}>
-                <div style={styles.cardHeader}>
-                  <MapPinIcon style={{ width: 16, height: 16, color: "#22d3ee" }} />
-                  Ubicacion GPS
-                </div>
-                <div style={styles.mapContainer}>
-                  <iframe
-                    title="Mapa"
-                    width="100%"
-                    height="100%"
-                    frameBorder="0"
-                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${latestData.longitud - 0.01},${latestData.latitud - 0.01},${latestData.longitud + 0.01},${latestData.latitud + 0.01}&layer=mapnik&marker=${latestData.latitud},${latestData.longitud}`}
-                  />
-                </div>
-              </div>
-
-              {/* Table */}
-              <div style={styles.card}>
-                <div style={styles.cardHeader}>Historial de Datos</div>
-                <div style={styles.tableContainer}>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr>
-                        <th style={styles.th}>Fecha</th>
-                        <th style={styles.th}>Temp</th>
-                        <th style={styles.th}>Humedad</th>
-                        <th style={styles.th}>Ubicacion</th>
-                        <th style={styles.th}>Hardware ID</th>
-                        <th style={styles.th}>Pedido ID</th>
-                        <th style={styles.th}>Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredData.map((row) => (
-                        <tr key={row.id}>
-                          <td style={styles.td}>{formatDate(row.created_at)}</td>
-                          <td style={{ ...styles.td, color: row.temperatura >= 2 && row.temperatura <= 8 ? "#22d3ee" : "#f87171" }}>
-                            {row.temperatura.toFixed(1)}°C
-                          </td>
-                          <td style={{ ...styles.td, color: row.humedad >= 60 && row.humedad <= 95 ? "#60a5fa" : "#fbbf24" }}>
-                            {row.humedad.toFixed(1)}%
-                          </td>
-                          <td style={{ ...styles.td, fontFamily: "monospace", fontSize: 12, color: "#94a3b8" }}>
-                            {row.latitud.toFixed(4)}, {row.longitud.toFixed(4)}
-                          </td>
-                          <td style={{ ...styles.td, fontFamily: "monospace", fontSize: 12, color: "#94a3b8" }}>
-                            {row.hardware_id}
-                          </td>
-                          <td style={{ ...styles.td, fontFamily: "monospace", fontSize: 12, color: "#94a3b8" }}>
-                            {row.id_pedido || "N/A"}
-                          </td>
-                          <td style={styles.td}>
-                            <span style={{
-                              ...styles.badge,
-                              backgroundColor: row.alerta === "OK" ? "rgba(74, 222, 128, 0.2)" : "rgba(248, 113, 113, 0.2)",
-                              color: row.alerta === "OK" ? "#4ade80" : "#f87171",
-                            }}>
-                              {row.alerta}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div style={styles.card}>
-              <div style={{ padding: "40px", textAlign: "center", color: "#94a3b8" }}>
-                <AlertTriangleIcon style={{ width: 48, height: 48, marginBottom: 16 }} />
-                <p>No hay registros para los filtros seleccionados</p>
-                <button onClick={clearFilters} style={{ ...styles.retryButton, marginTop: 16 }}>Limpiar filtros</button>
-              </div>
+          {/* Mapa Corregido */}
+          <div style={styles.card}>
+            <div style={styles.cardHeader}>
+              <MapPinIcon style={{ width: 18, height: 18, color: "#22d3ee" }} />
+              Ubicación en Tiempo Real
             </div>
-          )}
+            <div style={styles.mapContainer}>
+              <iframe
+                key={`${latestData.latitud}-${latestData.longitud}`}
+                title="Mapa de Tracking"
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                src={`https://www.openstreetmap.org/export/embed.html?bbox=${latestData.longitud - 0.005},${latestData.latitud - 0.005},${latestData.longitud + 0.005},${latestData.latitud + 0.005}&layer=mapnik&marker=${latestData.latitud},${latestData.longitud}`}
+              />
+            </div>
+          </div>
+
+          {/* Historial (Tabla) */}
+          <div style={styles.card}>
+            <div style={styles.cardHeader}>Historial de Telemetría</div>
+            <div style={styles.tableContainer}>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>Hora Local</th>
+                    <th style={styles.th}>Temp</th>
+                    <th style={styles.th}>Humedad</th>
+                    <th style={styles.th}>Sensor ID</th>
+                    <th style={styles.th}>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.map((row) => (
+                    <tr key={row.id}>
+                      <td style={styles.td}>{formatDate(row.created_at)}</td>
+                      <td style={{ ...styles.td, color: row.temperatura >= 2 && row.temperatura <= 8 ? "#22d3ee" : "#f87171", fontWeight: 500 }}>
+                        {row.temperatura.toFixed(1)}°C
+                      </td>
+                      <td style={{ ...styles.td, color: row.humedad >= 60 && row.humedad <= 95 ? "#60a5fa" : "#fbbf24" }}>
+                        {row.humedad.toFixed(1)}%
+                      </td>
+                      <td style={{ ...styles.td, fontFamily: "monospace", fontSize: 12, color: "#94a3b8" }}>
+                        {row.hardware_id}
+                      </td>
+                      <td style={styles.td}>
+                        <span style={{
+                          ...styles.badge,
+                          backgroundColor: row.alerta === "OK" ? "rgba(74, 222, 128, 0.15)" : "rgba(248, 113, 113, 0.15)",
+                          color: row.alerta === "OK" ? "#4ade80" : "#f87171",
+                          border: `1px solid ${row.alerta === "OK" ? "rgba(74, 222, 128, 0.3)" : "rgba(248, 113, 113, 0.3)"}`
+                        }}>
+                          {row.alerta}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
-        {/* Chat */}
+        {/* Chat de Asistencia */}
         <div style={styles.chatContainer}>
           <div style={styles.cardHeader}>
             <BotIcon style={{ width: 20, height: 20, color: "#22d3ee" }} />
-            Asistente Log-Cold
-            {filterPedidoId && (
-              <span style={{ fontSize: 12, backgroundColor: "#0891b2", padding: "2px 8px", borderRadius: 12, marginLeft: 8 }}>
-                Pedido: {filterPedidoId.substring(0, 8)}...
-              </span>
-            )}
+            Soporte IA del Pedido
           </div>
           <div style={styles.chatMessages}>
             {chatMessages.map((msg, i) => (
@@ -749,7 +687,7 @@ export default function Analytics() {
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-                placeholder="Pregunta sobre tu pedido..."
+                placeholder="Consulta el estado térmico..."
                 style={styles.chatInput}
               />
               <button onClick={handleSendMessage} style={styles.chatButton}>
@@ -757,18 +695,11 @@ export default function Analytics() {
               </button>
             </div>
             <p style={{ fontSize: 12, color: "#64748b", marginTop: 8 }}>
-              Prueba: estado, temperatura, humedad, ubicacion, alertas, hardware, pedido
+              Pregunta por: estado, temperatura, alertas o ubicación.
             </p>
           </div>
         </div>
       </main>
-
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }
