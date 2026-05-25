@@ -14,25 +14,25 @@ const features = [
     icon: LightbulbIcon,
     title: "Innovación",
     description:
-      "Implementamos un sistema de monitoreo basado en el protocolo ESP-NOW y microcontroladores ESP32,permitiendo una comunicación robusta y de bajo consumo que no depende exclusivamente de redes WiFi convencionales.",
+      "Implementamos arquitectura de Edge Computing con microcontroladores ESP32 y el protocolo inalámbrico ESP-NOW. Logramos un enlace local robusto, de alta precisión y ultra bajo consumo que elimina por completo el 'punto ciego' en subterráneos o zonas sin señal móvil , operando de manera independiente a planes de datos o redes tradicionales.",
   },
   {
     icon: TargetIcon,
     title: "Objetivo claro",
     description:
-      "Nuestra meta es eliminar la incertidumbre de los delivery. Automatizamos la captura de telemetría (temperatura, humedad y ubicación) para ofrecer reportes históricos auditables y alertas en tiempo real.",
+      "Erradicar la incertidumbre en la cadena de frío mediante la captura automatizada de telemetría ambiental (temperatura y humedad) y coordenadas GPS en tiempo real. Buscamos transformar datos crudos en reportes históricos e inalterables , facilitando auditorías normativas y disparando alertas proactivas antes de que ocurra la pérdida."
   },
   {
     icon: UsersIcon,
     title: "Trabajo en equipo",
     description:
-      "Desarrollamos el ciclo completo del producto: desde el diseño del hardware y firmware en C++, hasta la infraestructura de datos en Supabase y una interfaz de gestión moderna para el usuario final.",
+      "Unimos capacidades multidisciplinarias para abarcar de extremo a extremo el ciclo completo del producto. Nuestro equipo coordinó con éxito desde el diseño de hardware dedicado y firmware en C++, hasta el despliegue de la infraestructura en la nube con Supabase y el desarrollo de un dashboard moderno optimizado en React + Astro."
   },
   {
     icon: TrendingUpIcon,
     title: "Impacto real",
     description:
-      "Diseñado específicamente para PyMEs farmacéuticas y de delivery gastronómico. Log-Cold democratiza el acceso a tecnología de alta precisión, reduciendo mermas y asegurando el cumplimiento de normativas sanitarias.",
+      "El 15% de los despachos globales sufren fallas térmicas críticas en un mercado que mueve US$284.000 millones. Log-Cold democratiza la trazabilidad para PyMEs farmacéuticas y gastronómicas con hardware ESP32 de ultra bajo costo frente a competidores corporativos caros. Evitar la pérdida de un solo lote de vacunas, insulina o alimentos de alto valor financia por completo la implementación del sistema."
   },
 ];
 
@@ -94,8 +94,9 @@ export default function About() {
           </h2>
 
           <p className="about-text">
-            Una solución IoT integral diseñada para garantizar la integridad 
-            de la cadena de frío en el transporte de productos críticos.
+            Una solución IoT distribuida y de alta precisión, diseñada específicamente para auditar
+             de extremo a extremo la cadena de frío y eliminar la incertidumbre térmica en el 
+             transporte de activos médicos, vacunas y productos farmacéuticos críticos.
           </p>
 
           <p className="about-text">
