@@ -1,5 +1,5 @@
 import { ZapIcon } from "lucide-react";
-import './index.css';
+import './index2.css';
 
 export default function Footer() {
   const year = new Date().getFullYear();

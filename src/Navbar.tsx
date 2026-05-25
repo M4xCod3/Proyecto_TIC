@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MenuIcon, XIcon, ZapIcon } from "lucide-react";
 import { Button } from "./ui/button.tsx";
-import './index.css';
+import './index2.css';
 
 const navLinks = [
   { label: "Inicio", href: "#hero" },

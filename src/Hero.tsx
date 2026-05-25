@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { ArrowDownIcon, CircuitBoardIcon, WifiIcon, CpuIcon } from "lucide-react";
 import { Button } from "./ui/button.tsx";
-import './index.css';
+import './index2.css';
 
 const floatingIcons = [
   { icon: CircuitBoardIcon, delay: 0, x: "10%", y: "25%" },

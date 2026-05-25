@@ -6,7 +6,7 @@ import { Input } from "./ui/input.tsx";
 import { Textarea } from "./ui/textarea.tsx";
 import { Label } from "./ui/label.tsx";
 import { toast } from "sonner";
-import './index.css';
+import './index2.css';
 
 type FormState = {
   name: string;

@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { useInView } from "framer-motion";
 import { useRef } from "react";
-import './index.css';
+import './index2.css';
 import {
   LightbulbIcon,
   TargetIcon,
