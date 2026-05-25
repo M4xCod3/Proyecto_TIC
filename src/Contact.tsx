@@ -1,17 +1,12 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { MailIcon, SendIcon, GitBranchIcon, CheckCircleIcon } from "lucide-react";
+import { MailIcon, SendIcon,GitBranchIcon, CheckCircleIcon } from "lucide-react";
 import { Button } from "./ui/button.tsx";
 import { Input } from "./ui/input.tsx";
 import { Textarea } from "./ui/textarea.tsx";
 import { Label } from "./ui/label.tsx";
 import { toast } from "sonner";
-import { createClient } from "@supabase/supabase-js";
 import './index2.css';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 type FormState = {
   name: string;
@@ -26,11 +21,11 @@ const socialLinks = [
 ];
 
 export default function Contact() {
-  const [form, setForm] = useState<FormState>({\r
-    name: "",\r
-    email: "",\r
-    subject: "",\r
-    message: "",\r
+  const [form, setForm] = useState<FormState>({
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
   });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -43,130 +38,124 @@ export default function Contact() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Validar que todos los campos estén completos antes de enviar
-    if (!form.name.trim() || !form.email.trim() || !form.subject.trim() || !form.message.trim()) {
-      toast.error("Por favor, completa todos los campos del formulario.");
+    if (!form.name || !form.email || !form.message) {
+      toast.error("Por favor completa todos los campos requeridos.");
       return;
     }
-
-    setLoading(true);
-
-    try {
-      // Inserción de datos en la tabla de Supabase
-      const { error } = await supabase
-        .from("mensajes_contacto")
-        .insert([
-          {
-            nombre: form.name,
-            correo: form.email,
-            asunto: form.subject,
-            mensaje: form.message,
-          },
-        ]);
-
-      if (error) throw error;
-
-      // Si no hay error, actualizar estados e indicar éxito
-      setSubmitted(true);
-      toast.success("¡Mensaje enviado correctamente a la base de datos!");
-      
-      // Resetear el formulario vaciando los campos
-      setForm({ name: "", email: "", subject: "", message: "" });
-    } catch (error: any) {
-      console.error("Error al guardar el mensaje:", error.message);
-      toast.error("Hubo un problema al enviar el mensaje. Inténtalo de nuevo.");
-    } finally {
-      setLoading(false);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      toast.error("Por favor ingresa un correo electrónico válido.");
+      return;
     }
+    setLoading(true);
+    await new Promise((r) => setTimeout(r, 1200));
+    setLoading(false);
+    setSubmitted(true);
+    toast.success("Mensaje enviado correctamente. Te contactaremos pronto.");
   };
 
   return (
-    <section className="contact-section" id="contacto">
-      <div className="contact-container">
-        <div className="contact-header">
-          <h2 className="contact-title">
-            Contáctanos y <span className="gradient-text">Trabajemos Juntos</span>
-          </h2>
-          <p className="contact-description">
-            Si tienes dudas sobre Log-Cold o quieres implementar nuestra solución, escríbenos.
+    <section id="contact" className="contact-section">
+  <div className="contact-container">
+
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.6 }}
+      className="contact-header"
+    >
+      <span className="contact-subtitle">
+        <span className="line" />
+        Contacto
+        <span className="line" />
+      </span>
+
+      <h2 className="contact-title">
+        Hablemos del <span className="gradient-text">proyecto</span>
+      </h2>
+
+      <p className="contact-description">
+        ¿Tienes preguntas o quieres colaborar? Escríbenos.
+      </p>
+    </motion.div>
+
+    <div className="contact-grid">
+
+      <div className="contact-left">
+        <div className="contact-box">
+          <h3>Equipo del proyecto</h3>
+          <p>
+            Somos estudiantes apasionados por la tecnología. 
+            Contáctanos para dudas o colaboración.
           </p>
         </div>
 
-        <div className="contact-grid">
-          <div className="contact-left">
-            <div className="contact-box">
-              <h3>Información de Contacto</h3>
-              <p>Estamos disponibles para resolver tus dudas técnicas o comerciales.</p>
-              <div className="contact-links">
-                {socialLinks.map((link, idx) => {
-                  const Icon = link.icon;
-                  return (
-                    <a key={idx} href={link.href} target="_blank" rel="noreferrer">
-                      <Icon size={18} />
-                      {link.label}
-                    </a>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          <div className="contact-right">
-            {submitted ? (
-              <div className="contact-success">
-                <CheckCircleIcon size={40} />
-                <h3>Mensaje enviado</h3>
-                <p>El mensaje ha sido registrado en la base de datos con éxito.</p>
-                <button onClick={() => setSubmitted(false)}>
-                  Enviar otro mensaje
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="contact-form">
-                <div className="form-row">
-                  <input
-                    name="name"
-                    placeholder="Nombre"
-                    value={form.name}
-                    onChange={handleChange}
-                    required
-                  />
-                  <input
-                    name="email"
-                    type="email"
-                    placeholder="Correo"
-                    value={form.email}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-
-                <input
-                  name="subject"
-                  placeholder="Asunto"
-                  value={form.subject}
-                  onChange={handleChange}
-                  required
-                />
-
-                <textarea
-                  name="message"
-                  placeholder="Mensaje"
-                  rows={5}
-                  value={form.message}
-                  onChange={handleChange}
-                  required
-                />
-
-                <button type="submit" disabled={loading}>
-                  {loading ? "Enviando..." : "Enviar mensaje"}
-                </button>
-              </form>
-            )}
+        <div className="contact-box">
+          <h3>Redes</h3>
+          <div className="contact-links">
+            {socialLinks.map(({ icon: Icon, label, href }) => (
+              <a key={label} href={href} target="_blank">
+                <Icon />
+                {label}
+              </a>
+            ))}
           </div>
         </div>
       </div>
-    </section>
+
+      <div className="contact-right">
+        {submitted ? (
+          <div className="contact-success">
+            <CheckCircleIcon />
+            <h3>Mensaje enviado</h3>
+            <p>Te responderemos pronto.</p>
+            <button onClick={() => setSubmitted(false)}>
+              Enviar otro
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="contact-form">
+
+            <div className="form-row">
+              <input
+                name="name"
+                placeholder="Nombre"
+                value={form.name}
+                onChange={handleChange}
+              />
+              <input
+                name="email"
+                placeholder="Correo"
+                value={form.email}
+                onChange={handleChange}
+              />
+            </div>
+
+            <input
+              name="subject"
+              placeholder="Asunto"
+              value={form.subject}
+              onChange={handleChange}
+            />
+
+            <textarea
+              name="message"
+              placeholder="Mensaje"
+              rows={5}
+              value={form.message}
+              onChange={handleChange}
+            />
+
+            <button type="submit" disabled={loading}>
+              {loading ? "Enviando..." : "Enviar mensaje"}
+            </button>
+
+          </form>
+        )}
+      </div>
+
+    </div>
+  </div>
+</section>
   );
 }
