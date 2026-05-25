@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { CpuIcon, WifiIcon, ThermometerIcon, DatabaseIcon, MonitorIcon, ZapIcon } from "lucide-react";
 import { Badge } from   "../src/ui/badge.tsx";
-import './index.css';
+import './index2.css';
 
 const components = [
   {

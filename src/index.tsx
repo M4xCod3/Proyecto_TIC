@@ -6,7 +6,7 @@ import Contact from './Contact';
 import Footer from './Footer';
 import Document from './document';
 
-import './index.css'; 
+import './index2.css'; 
 
 export default function Index() {
   return (
