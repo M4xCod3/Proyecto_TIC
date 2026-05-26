@@ -74,7 +74,7 @@ export default function Index() {
       <div id="document"> 
         <Document />
       </div>
-
+      
       <div id="contact">
         <Contact />
       </div>
