@@ -46,11 +46,13 @@ const styles = {
     color: "#ffffff",
     fontFamily: "'Segoe UI', sans-serif",
   } as React.CSSProperties,
+
   header: {
     backgroundColor: "#1e293b",
     borderBottom: "1px solid #334155",
     padding: "12px 16px",
   } as React.CSSProperties,
+
   headerContent: {
     maxWidth: "1200px",
     margin: "0 auto",
@@ -58,11 +60,13 @@ const styles = {
     alignItems: "center",
     justifyContent: "space-between",
   } as React.CSSProperties,
+
   headerLeft: {
     display: "flex",
     alignItems: "center",
     gap: "12px",
   } as React.CSSProperties,
+
   backButton: {
     padding: "8px",
     backgroundColor: "transparent",
@@ -74,22 +78,26 @@ const styles = {
     alignItems: "center",
     gap: "8px",
   } as React.CSSProperties,
+
   title: {
     fontSize: "20px",
     fontWeight: "bold",
     color: "#22d3ee",
     margin: 0,
   } as React.CSSProperties,
+
   subtitle: {
     fontSize: "14px",
     color: "#94a3b8",
     margin: 0,
   } as React.CSSProperties,
+
   statusBadge: {
     display: "flex",
     alignItems: "center",
     gap: "8px",
   } as React.CSSProperties,
+
   statusDot: {
     width: "8px",
     height: "8px",
@@ -97,6 +105,7 @@ const styles = {
     borderRadius: "50%",
     boxShadow: "0 0 8px #4ade80",
   } as React.CSSProperties,
+
   main: {
     maxWidth: "1200px",
     margin: "0 auto",
@@ -105,25 +114,30 @@ const styles = {
     gridTemplateColumns: "1fr",
     gap: "16px",
   } as React.CSSProperties,
+
   mainDesktop: {
     gridTemplateColumns: "2fr 1fr",
   } as React.CSSProperties,
+
   leftColumn: {
     display: "flex",
     flexDirection: "column" as const,
     gap: "16px",
   } as React.CSSProperties,
+
   statsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(2, 1fr)",
     gap: "12px",
   } as React.CSSProperties,
+
   statCard: {
     backgroundColor: "#1e293b",
     borderRadius: "8px",
     padding: "16px",
     border: "1px solid #334155",
   } as React.CSSProperties,
+
   statLabel: {
     display: "flex",
     alignItems: "center",
@@ -132,17 +146,20 @@ const styles = {
     fontSize: "12px",
     marginBottom: "4px",
   } as React.CSSProperties,
+
   statValue: {
     fontSize: "24px",
     fontWeight: "bold",
     margin: 0,
   } as React.CSSProperties,
+
   card: {
     backgroundColor: "#1e293b",
     borderRadius: "8px",
     border: "1px solid #334155",
     overflow: "hidden",
   } as React.CSSProperties,
+
   cardHeader: {
     padding: "12px",
     borderBottom: "1px solid #334155",
@@ -152,21 +169,25 @@ const styles = {
     gap: "8px",
     backgroundColor: "#1e293b",
   } as React.CSSProperties,
+
   mapContainer: {
     height: "350px",
     width: "100%",
     backgroundColor: "#334155",
   } as React.CSSProperties,
+
   tableContainer: {
     overflowX: "auto" as const,
     maxHeight: "300px",
     overflowY: "auto" as const,
   } as React.CSSProperties,
+
   table: {
     width: "100%",
     fontSize: "14px",
     borderCollapse: "collapse" as const,
   } as React.CSSProperties,
+
   th: {
     backgroundColor: "#334155",
     padding: "8px 12px",
@@ -175,10 +196,12 @@ const styles = {
     top: 0,
     zIndex: 10,
   } as React.CSSProperties,
+
   td: {
     padding: "8px 12px",
     borderTop: "1px solid #334155",
   } as React.CSSProperties,
+
   chatContainer: {
     backgroundColor: "#1e293b",
     borderRadius: "8px",
@@ -187,6 +210,7 @@ const styles = {
     flexDirection: "column" as const,
     height: "600px",
   } as React.CSSProperties,
+
   chatMessages: {
     flex: 1,
     overflowY: "auto" as const,
@@ -195,14 +219,17 @@ const styles = {
     flexDirection: "column" as const,
     gap: "12px",
   } as React.CSSProperties,
+
   chatInputContainer: {
     padding: "12px",
     borderTop: "1px solid #334155",
   } as React.CSSProperties,
+
   chatInputRow: {
     display: "flex",
     gap: "8px",
   } as React.CSSProperties,
+
   chatInput: {
     flex: 1,
     backgroundColor: "#334155",
@@ -213,6 +240,7 @@ const styles = {
     fontSize: "14px",
     outline: "none",
   } as React.CSSProperties,
+
   chatButton: {
     padding: "8px 12px",
     backgroundColor: "#0891b2",
@@ -221,6 +249,7 @@ const styles = {
     color: "#ffffff",
     cursor: "pointer",
   } as React.CSSProperties,
+
   userMessage: {
     alignSelf: "flex-end",
     backgroundColor: "#0891b2",
@@ -230,6 +259,7 @@ const styles = {
     maxWidth: "85%",
     fontSize: "14px",
   } as React.CSSProperties,
+
   assistantMessage: {
     alignSelf: "flex-start",
     backgroundColor: "#334155",
@@ -240,6 +270,7 @@ const styles = {
     fontSize: "14px",
     whiteSpace: "pre-wrap" as const,
   } as React.CSSProperties,
+
   centerScreen: {
     minHeight: "100vh",
     backgroundColor: "#0f172a",
@@ -249,12 +280,14 @@ const styles = {
     justifyContent: "center",
     fontFamily: "'Segoe UI', sans-serif",
   } as React.CSSProperties,
+
   centerContent: {
     textAlign: "center" as const,
     padding: "32px",
     maxWidth: "450px",
     width: "100%",
   } as React.CSSProperties,
+
   searchBox: {
     backgroundColor: "#1e293b",
     padding: "32px",
@@ -262,12 +295,14 @@ const styles = {
     border: "1px solid #334155",
     boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5)",
   } as React.CSSProperties,
+
   searchTitle: {
     fontSize: "24px",
     fontWeight: "bold",
     marginBottom: "8px",
     color: "#ffffff",
   } as React.CSSProperties,
+
   searchInput: {
     width: "100%",
     backgroundColor: "#0f172a",
@@ -281,6 +316,7 @@ const styles = {
     outline: "none",
     boxSizing: "border-box" as const,
   } as React.CSSProperties,
+
   searchMainButton: {
     width: "100%",
     padding: "12px",
@@ -297,6 +333,7 @@ const styles = {
     gap: "8px",
     transition: "background-color 0.2s",
   } as React.CSSProperties,
+  
   badge: {
     padding: "2px 8px",
     borderRadius: "4px",
