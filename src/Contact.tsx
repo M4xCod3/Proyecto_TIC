@@ -17,6 +17,28 @@ const socialLinks = [
   { icon: MailIcon, label: "Email", href: "mailto:maximiliano.arriagada@mail.udp.cl" },
 ];
 
+const getSupabaseClient = () => {
+  // Si estamos en el servidor (Astro SSR), no hacemos nada
+  if (typeof window === "undefined") return null;
+
+  // Forzar el tipado en window para evitar que TypeScript reclame
+  const globalWindow = window as any;
+
+  // Si no existe la instancia en este navegador, la creamos UNA sola vez
+  if (!globalWindow.supabaseInstance) {
+    const url = import.meta.env.VITE_SUPABASE_URL;
+    const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+    if (!url || !key) {
+      throw new Error("Faltan las variables de entorno de Supabase en el .env");
+    }
+
+    globalWindow.supabaseInstance = createClient(url, key);
+  }
+
+  return globalWindow.supabaseInstance;
+};
+
 export default function Contact() {
   const [form, setForm] = useState<FormState>({
     name: "",
