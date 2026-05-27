@@ -14,6 +14,7 @@ export default defineConfig({
         IMP: resolve(__dirname, 'IMP.html'),
         CONT: resolve(__dirname, 'CONT.html'),
         PB: resolve(__dirname, 'PB.html'),
+        coments: resolve(__dirname, 'coments.html'),
       },
     },
   },
