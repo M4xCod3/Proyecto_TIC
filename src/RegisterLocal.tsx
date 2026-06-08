@@ -41,11 +41,11 @@ export default function RegisterLocal() {
       if (authError) throw authError;
 
       // 3. Inserción en la tabla locales
-      // Usamos el ID generado por Auth para relacionarlo
+      // He cambiado 'dueno' a 'dueño' para coincidir con tu posible estructura de tabla
       const { error: dbError } = await supabase.from("locales").insert([{ 
         nombre_local: formData.nombre_local, 
         direccion: formData.direccion, 
-        dueno: formData.dueno,
+        dueño: formData.dueno, 
         user_id: data.user?.id 
       }]);
 
