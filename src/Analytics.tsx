@@ -362,7 +362,8 @@ export default function Analytics() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Efecto principal que carga los datos SOLO cuando hay un ID activo
+
+  // Efecto principal que carga los datos cuando se ingresa el Código de Pedido
   useEffect(() => {
     if (!activePedidoId) return;
 
@@ -377,10 +378,10 @@ export default function Analytics() {
       }
 
       try {
-        // 1. MODIFICACIÓN: Consultar primero el estado de la orden en la tabla relacional 'pedido'
+        // 1. Consultar primero el ID interno y el estado en la tabla 'pedido' usando el código ingresado
         const { data: ordenInfo, error: ordenError } = await supabase
           .from("pedido")
-          .select("estado")
+          .select("id, estado") // 🌟 CAMBIO: Traemos también el 'id' primario de la orden
           .eq("codigo_pedido", activePedidoId)
           .maybeSingle();
 
@@ -390,21 +391,22 @@ export default function Analytics() {
           return;
         }
 
-        // Si existe el pedido, actualizamos su estado real (En tránsito, Entregado, etc.)
+        // Si existe el pedido, actualizamos su estado real
         if (ordenInfo) {
           setPedidoEstado(ordenInfo.estado);
         } else {
-          // Si el código no está en la tabla 'pedido', devolvemos error directo
+          // 🌟 CAMBIO: Si el código no existe en la tabla 'pedido', mostramos un error explícito
+          setError(`El código de pedido "${activePedidoId}" no existe en el sistema.`);
           setData([]);
           setLoading(false);
           return;
         }
 
-        // 2. Consultamos los datos de telemetría del pedido ingresado
+        // 2. Consultamos la telemetría usando el 'id' interno que acabamos de recuperar de 'ordenInfo'
         const { data: pedidos, error: queryError } = await supabase
           .from("pedidos_monitoreo")
           .select("*")
-          .eq("id_pedido", activePedidoId)
+          .eq("id_pedido", ordenInfo.id) // 🌟 CAMBIO: Filtramos por ordenInfo.id en lugar de activePedidoId
           .order("created_at", { ascending: false })
           .limit(500);
 
@@ -423,16 +425,16 @@ export default function Analytics() {
         
         setLoading(false);
 
-        // 3. Suscripción en tiempo real a la telemetría
+        // 3. Suscripción en tiempo real a la telemetría usando el ID interno
         const telemetriaChannel = supabase
-          .channel(`pedido_realtime_${activePedidoId}`)
+          .channel(`pedido_realtime_${ordenInfo.id}`)
           .on(
             "postgres_changes",
             { 
               event: "INSERT", 
               schema: "public", 
               table: "pedidos_monitoreo",
-              filter: `id_pedido=eq.${activePedidoId}`
+              filter: `id_pedido=eq.${ordenInfo.id}` // 🌟 CAMBIO: Escuchamos los inserts vinculados al ID interno
             },
             (payload) => {
               const newRecord = payload.new as PedidoMonitoreo;
@@ -441,7 +443,7 @@ export default function Analytics() {
           )
           .subscribe();
 
-        // 4. MODIFICACIÓN: Suscripción en tiempo real al estado del viaje en la tabla 'pedido'
+        // 4. Suscripción en tiempo real al estado del viaje en la tabla 'pedido'
         const estadoChannel = supabase
           .channel(`pedido_estado_${activePedidoId}`)
           .on(
@@ -450,7 +452,7 @@ export default function Analytics() {
               event: "UPDATE",
               schema: "public",
               table: "pedido",
-              filter: `codigo_pedido=eq.${activePedidoId}`
+              filter: `codigo_pedido=eq.${activePedidoId}` // Mantiene el código público
             },
             (payload) => {
               if (payload.new && "estado" in payload.new) {
@@ -568,13 +570,15 @@ export default function Analytics() {
             <PackageIcon style={{ width: 48, height: 48, color: "#22d3ee", margin: "0 auto 16px" }} />
             <h2 style={styles.searchTitle}>Tracking Log-Cold</h2>
             <p style={{ color: "#94a3b8", fontSize: "14px", margin: 0 }}>
-              Ingresa el identificador de tu paquete para monitorear la cadena de frío en tiempo real.
+              {/* 🌟 CAMBIO: Texto más intuitivo */}
+              Ingresa el código de tu pedido para monitorear la cadena de frío en tiempo real.
             </p>
             
             <form onSubmit={handleSearchSubmit}>
               <input
                 type="text"
-                placeholder="Ej: NOW-PE-102"
+                {/* 🌟 CAMBIO: Cambiamos el ejemplo por uno que parezca código de pedido comercial */}
+                placeholder="Ej: PED-00412" 
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 style={styles.searchInput}
