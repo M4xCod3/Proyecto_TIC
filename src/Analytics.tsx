@@ -577,7 +577,6 @@ export default function Analytics() {
             <form onSubmit={handleSearchSubmit}>
               <input
                 type="text"
-                {/* 🌟 CAMBIO: Cambiamos el ejemplo por uno que parezca código de pedido comercial */}
                 placeholder="Ej: PED-00412" 
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
