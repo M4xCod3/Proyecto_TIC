@@ -45,7 +45,7 @@ export default function RegisterLocal() {
       const { error: dbError } = await supabase.from("locales").insert([{ 
         nombre_local: formData.nombre_local, 
         direccion: formData.direccion, 
-        dueño: formData.dueno, 
+        dueno: formData.dueno, 
         user_id: data.user?.id 
       }]);
 
