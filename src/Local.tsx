@@ -8,28 +8,27 @@ const supabase = createClient(
 
 export default function LocalPage() {
   const [user, setUser] = useState<any>(null);
-  const [localId, setLocalId] = useState<string | null>(null);
+  const [localInfo, setLocalInfo] = useState({ id: "", nombre_local: "" });
   const [loading, setLoading] = useState(false);
   const [authData, setAuthData] = useState({ email: "", password: "" });
   const [pedidoData, setPedidoData] = useState({ codigo_pedido: "", hardware_id: "" });
 
-  // Verificar si hay sesión activa al cargar
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
         setUser(data.session.user);
-        obtenerLocalId(data.session.user.email);
+        obtenerLocal(data.session.user.email);
       }
     });
   }, []);
 
-  const obtenerLocalId = async (email: string | undefined) => {
+  const obtenerLocal = async (email: string | undefined) => {
     const { data } = await supabase
       .from("locales")
-      .select("id")
+      .select("id, nombre_local")
       .eq("correo", email)
       .single();
-    if (data) setLocalId(data.id);
+    if (data) setLocalInfo(data);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -38,47 +37,66 @@ export default function LocalPage() {
     if (error) alert(error.message);
     else {
       setUser(data.user);
-      obtenerLocalId(data.user.email);
+      obtenerLocal(data.user.email);
     }
   };
 
   const handleRegistrarPedido = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!localId) return;
     setLoading(true);
     const { error } = await supabase.from("pedido").insert([{
       codigo_pedido: pedidoData.codigo_pedido,
-      local_id: localId,
+      local_id: localInfo.id,
       hardware_id: pedidoData.hardware_id,
       estado: "activo"
     }]);
     if (error) alert(error.message);
-    else alert("Pedido registrado exitosamente.");
+    else {
+      alert("Pedido registrado exitosamente.");
+      setPedidoData({ codigo_pedido: "", hardware_id: "" });
+    }
     setLoading(false);
+  };
+
+  const containerStyle: React.CSSProperties = { 
+    padding: '40px', maxWidth: '400px', margin: '50px auto', 
+    backgroundColor: '#ffffff', borderRadius: '15px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+    fontFamily: 'sans-serif', color: '#334155' 
+  };
+  const inputStyle: React.CSSProperties = { 
+    width: '100%', padding: '12px', margin: '8px 0', borderRadius: '8px', 
+    border: '1px solid #cbd5e1', boxSizing: 'border-box' 
   };
 
   if (!user) {
     return (
-      <div style={{ padding: '50px', textAlign: 'center' }}>
-        <h2>Iniciar Sesión</h2>
-        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '300px', margin: 'auto' }}>
-          <input type="email" placeholder="Correo" onChange={(e) => setAuthData({...authData, email: e.target.value})} />
-          <input type="password" placeholder="Contraseña" onChange={(e) => setAuthData({...authData, password: e.target.value})} />
-          <button type="submit">Ingresar</button>
+      <div style={containerStyle}>
+        <h2 style={{ textAlign: 'center' }}>Iniciar Sesión</h2>
+        <form onSubmit={handleLogin}>
+          <input type="email" placeholder="Correo" style={inputStyle} onChange={(e) => setAuthData({...authData, email: e.target.value})} />
+          <input type="password" placeholder="Contraseña" style={inputStyle} onChange={(e) => setAuthData({...authData, password: e.target.value})} />
+          <button style={{ width: '100%', padding: '12px', marginTop: '10px', backgroundColor: '#06b6d4', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Ingresar</button>
         </form>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '50px' }}>
-      <h2>Bienvenido, Local: {localId}</h2>
-      <form onSubmit={handleRegistrarPedido} style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '300px' }}>
-        <input required placeholder="Código de Pedido" onChange={(e) => setPedidoData({...pedidoData, codigo_pedido: e.target.value})} />
-        <input required placeholder="ID Hardware" onChange={(e) => setPedidoData({...pedidoData, hardware_id: e.target.value})} />
-        <button disabled={loading} type="submit">{loading ? "..." : "Registrar Pedido"}</button>
+    <div style={containerStyle}>
+      <h2 style={{ fontSize: '1.5rem', marginBottom: '5px' }}>¡Hola, {localInfo.nombre_local}!</h2>
+      <p style={{ fontSize: '0.9rem', color: '#64748b' }}>Panel de Control de Pedidos</p>
+      
+      <form onSubmit={handleRegistrarPedido} style={{ marginTop: '20px' }}>
+        <input required placeholder="Código de Pedido" value={pedidoData.codigo_pedido} style={inputStyle} onChange={(e) => setPedidoData({...pedidoData, codigo_pedido: e.target.value})} />
+        <input required placeholder="ID Hardware (Ej: HW1_CEREBRO)" value={pedidoData.hardware_id} style={inputStyle} onChange={(e) => setPedidoData({...pedidoData, hardware_id: e.target.value})} />
+        <button disabled={loading} style={{ width: '100%', padding: '12px', marginTop: '10px', backgroundColor: '#1e293b', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
+          {loading ? "Registrando..." : "Registrar Pedido"}
+        </button>
       </form>
-      <button onClick={() => { supabase.auth.signOut(); window.location.reload(); }}>Cerrar Sesión</button>
+      
+      <button onClick={() => { supabase.auth.signOut(); window.location.reload(); }} style={{ width: '100%', padding: '10px', marginTop: '20px', backgroundColor: 'transparent', border: '1px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer' }}>
+        Cerrar Sesión
+      </button>
     </div>
   );
 }
