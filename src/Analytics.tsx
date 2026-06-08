@@ -362,8 +362,7 @@ export default function Analytics() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-
-  // Efecto principal que carga los datos cuando se ingresa el Código de Pedido
+// Efecto principal: Consulta DIRECTAMENTE a pedidos_monitoreo
   useEffect(() => {
     if (!activePedidoId) return;
 
@@ -378,35 +377,11 @@ export default function Analytics() {
       }
 
       try {
-        // 1. Consultar primero el ID interno y el estado en la tabla 'pedido' usando el código ingresado
-        const { data: ordenInfo, error: ordenError } = await supabase
-          .from("pedido")
-          .select("id, estado") // 🌟 CAMBIO: Traemos también el 'id' primario de la orden
-          .eq("codigo_pedido", activePedidoId)
-          .maybeSingle();
-
-        if (ordenError) {
-          setError("Error obteniendo orden: " + ordenError.message);
-          setLoading(false);
-          return;
-        }
-
-        // Si existe el pedido, actualizamos su estado real
-        if (ordenInfo) {
-          setPedidoEstado(ordenInfo.estado);
-        } else {
-          // 🌟 CAMBIO: Si el código no existe en la tabla 'pedido', mostramos un error explícito
-          setError(`El código de pedido "${activePedidoId}" no existe en el sistema.`);
-          setData([]);
-          setLoading(false);
-          return;
-        }
-
-        // 2. Consultamos la telemetría usando el 'id' interno que acabamos de recuperar de 'ordenInfo'
+        // Consultamos la telemetría directamente usando el código ingresado en 'id_pedido'
         const { data: pedidos, error: queryError } = await supabase
           .from("pedidos_monitoreo")
           .select("*")
-          .eq("id_pedido", ordenInfo.id) // 🌟 CAMBIO: Filtramos por ordenInfo.id en lugar de activePedidoId
+          .eq("id_pedido", activePedidoId)
           .order("created_at", { ascending: false })
           .limit(500);
 
@@ -416,6 +391,7 @@ export default function Analytics() {
           return;
         }
 
+        // Seteamos los datos directamente
         setData(pedidos || []);
         
         // Mensaje de bienvenida del chat personalizado
@@ -425,16 +401,16 @@ export default function Analytics() {
         
         setLoading(false);
 
-        // 3. Suscripción en tiempo real a la telemetría usando el ID interno
+        // Suscripción en tiempo real directa a la telemetría en 'pedidos_monitoreo'
         const telemetriaChannel = supabase
-          .channel(`pedido_realtime_${ordenInfo.id}`)
+          .channel(`pedido_realtime_${activePedidoId}`)
           .on(
             "postgres_changes",
             { 
               event: "INSERT", 
               schema: "public", 
               table: "pedidos_monitoreo",
-              filter: `id_pedido=eq.${ordenInfo.id}` // 🌟 CAMBIO: Escuchamos los inserts vinculados al ID interno
+              filter: `id_pedido=eq.${activePedidoId}` // Escucha cambios directos de este código de pedido
             },
             (payload) => {
               const newRecord = payload.new as PedidoMonitoreo;
@@ -443,28 +419,8 @@ export default function Analytics() {
           )
           .subscribe();
 
-        // 4. Suscripción en tiempo real al estado del viaje en la tabla 'pedido'
-        const estadoChannel = supabase
-          .channel(`pedido_estado_${activePedidoId}`)
-          .on(
-            "postgres_changes",
-            {
-              event: "UPDATE",
-              schema: "public",
-              table: "pedido",
-              filter: `codigo_pedido=eq.${activePedidoId}` // Mantiene el código público
-            },
-            (payload) => {
-              if (payload.new && "estado" in payload.new) {
-                setPedidoEstado((payload.new as any).estado);
-              }
-            }
-          )
-          .subscribe();
-
         return () => {
           telemetriaChannel.unsubscribe();
-          estadoChannel.unsubscribe();
         };
       } catch (err) {
         setError("Error: " + (err instanceof Error ? err.message : "Desconocido"));
@@ -570,19 +526,19 @@ export default function Analytics() {
             <PackageIcon style={{ width: 48, height: 48, color: "#22d3ee", margin: "0 auto 16px" }} />
             <h2 style={styles.searchTitle}>Tracking Log-Cold</h2>
             <p style={{ color: "#94a3b8", fontSize: "14px", margin: 0 }}>
-              {/* 🌟 CAMBIO: Texto más intuitivo */}
               Ingresa el código de tu pedido para monitorear la cadena de frío en tiempo real.
             </p>
             
             <form onSubmit={handleSearchSubmit}>
               <input
                 type="text"
-                placeholder="Ej: PED-00412" 
+                placeholder="Ej: 1001" // Pon aquí el formato real del código de pedido que estés usando en tu telemetría
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 style={styles.searchInput}
                 autoFocus
               />
+
               <button 
                 type="submit" 
                 style={{
