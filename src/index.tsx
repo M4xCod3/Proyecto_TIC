@@ -23,6 +23,7 @@ export default function Index() {
             <a href="/analytics.html">Analytics</a>
             <a href="#contact">Contacto</a>
             <Link to="/registro" style={{ color: "#06b6d4" }}>Registrar Local</Link>
+            <Link to="/local" style={{ color: "#06b6d4" }}>Panel Local</Link>
           </div>
           <button className="btn-contacto" onClick={() => {
             const el = document.querySelector("#contact");
