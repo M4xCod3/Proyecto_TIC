@@ -80,26 +80,32 @@ export default function Analytics() {
   }, []);
 
   // EFECTO 1: Carga inicial de locales desde Supabase
-  useEffect(() => {
-    const cargarLocales = async () => {
-      try {
-        const { data: locales, error: localesError } = await supabase
-          .from("locales")
-          .select("id, nombre_local") 
-          .order("nombre_local", { ascending: true });
+  // EFECTO 1: Carga inicial de locales desde Supabase
+useEffect(() => {
+  const cargarLocales = async () => {
+    try {
+      console.log("🔍 Intentando conectar a Supabase...");
+      const { data: locales, error: localesError } = await supabase
+        .from("locales")
+        .select("id, nombre_local") 
+        .order("nombre_local", { ascending: true });
 
-        if (!localesError && locales) {
-          setLocalesList(locales);
-        } else if (localesError) {
-          console.error("Error de query en Supabase:", localesError.message);
-        }
-      } catch (err) {
-        console.error("Error crítico de red al obtener los locales:", err);
+      // 🔴 AGREGA ESTOS LOGS PARA DEBUGUEAR:
+      console.log("📦 Datos recibidos de Supabase:", locales);
+      if (localesError) {
+        console.error("❌ Error de query en Supabase:", localesError.message);
       }
-    };
 
-    cargarLocales();
-  }, []);
+      if (!localesError && locales) {
+        setLocalesList(locales);
+      }
+    } catch (err) {
+      console.error("❌ Error crítico de red al obtener los locales:", err);
+    }
+  };
+
+  cargarLocales();
+}, []);
 
   // EFECTO 2: Consulta de Telemetría Realtime con payload tipado explícitamente
   useEffect(() => {
