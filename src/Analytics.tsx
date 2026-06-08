@@ -343,11 +343,11 @@ const styles = {
 };
 
 export default function Analytics() {
-  const [activePedidoId, setActivePedidoId] = useState<string>("").trim();
+  const [activePedidoId, setActivePedidoId] = useState<string>("");
   const [searchInput, setSearchInput] = useState<string>("");
   
   const [data, setData] = useState<PedidoMonitoreo[]>([]);
-  const [pedidoEstado, setPedidoEstado] = useState<string>("En tránsito"); // Modificación: Estado real de la orden
+  const [pedidoEstado, setPedidoEstado] = useState<string>("En tránsito");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
