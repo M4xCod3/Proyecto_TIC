@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { Link } from 'react-router-dom';
 import About from './About';
 import Hardware from './Hardware';
 import Contact from './Contact';
@@ -21,6 +22,7 @@ export default function Index() {
             <a href="#document">Documentacion</a>
             <a href="/analytics.html">Analytics</a>
             <a href="#contact">Contacto</a>
+            <Link to="/registro" style={{ color: "#06b6d4" }}>Registrar Local</Link>
           </div>
           <button className="btn-contacto" onClick={() => {
             const el = document.querySelector("#contact");
@@ -81,16 +83,5 @@ export default function Index() {
 
       <Footer />
     </>
-  );
-}
-
-const rootElement = document.getElementById('root');
-
-if (rootElement) {
-  const root = ReactDOM.createRoot(rootElement);
-  root.render(
-    <React.StrictMode>
-      <Index />
-    </React.StrictMode>
   );
 }

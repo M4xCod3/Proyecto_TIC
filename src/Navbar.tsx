@@ -11,6 +11,7 @@ const navLinks = [
   { label: "Documento", href: "document"},
   { label: "Analytics", href: "/analytics.html", external: true },
   { label: "Contacto", href: "#contact" },
+  { label: "Registrar Local", href: "/registro", external: true },
 ];
 
 export default function Navbar() {
