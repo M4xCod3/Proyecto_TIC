@@ -1,6 +1,5 @@
-}import React, { useState, useEffect, useRef } from "react";
-// Importación de la instancia de Supabase (ajusta la ruta según tu proyecto)
-import { createClient } from "@supabase/supabase-browser"; 
+import { useState, useEffect, useRef } from "react";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 // Si ya tienes un cliente exportado en tu app, usa algo como: import { supabase } from "@/lib/supabase";
 const supabase = (window as any).supabase; // Placeholder por si lo manejas global, adáptalo a tu import real.
 
@@ -148,7 +147,7 @@ export default function Analytics() {
               table: "pedidos_monitoreo",
               filter: `id_pedido=eq.${activePedidoId}`
             },
-            (payload) => {
+            (payload: any) => { // 🌟 SOLUCIÓN: Agregamos ": any" explícito aquí
               const newRecord = payload.new as PedidoMonitoreo;
               // Filtro en el cliente para asegurar que el insert pertenece al mismo id_local
               if (newRecord.id_local === activeLocalId) {
