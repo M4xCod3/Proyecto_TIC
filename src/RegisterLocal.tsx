@@ -22,44 +22,43 @@ export default function RegisterLocal() {
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (formData.password !== formData.confirmPassword) {
-      alert("Las contraseñas no coinciden.");
-      return;
-    }
+  if (formData.password !== formData.confirmPassword) {
+    alert("Las contraseñas no coinciden.");
+    return;
+  }
 
-    setLoading(true);
+  setLoading(true);
 
-    try {
-      // 2. Registro en Auth
-      const { data, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-      });
+  try {
+    // 1. Registro en Auth
+    const { error: authError } = await supabase.auth.signUp({
+      email: formData.email,
+      password: formData.password,
+    });
 
-      if (authError) throw authError;
+    if (authError) throw authError;
 
-      // 3. Inserción en la tabla locales
-      // He cambiado 'dueno' a 'dueño' para coincidir con tu posible estructura de tabla
-      const { error: dbError } = await supabase.from("locales").insert([{ 
-        nombre_local: formData.nombre_local, 
-        direccion: formData.direccion, 
-        dueno: formData.dueno, 
-        user_id: data.user?.id 
-      }]);
+    // 2. Insert en tabla locales (Solo con tus columnas)
+    const { error: dbError } = await supabase.from("locales").insert([{ 
+      nombre_local: formData.nombre_local, 
+      correo: formData.email, 
+      direccion: formData.direccion, 
+      dueno: formData.dueno
+    }]);
 
-      if (dbError) throw dbError;
+    if (dbError) throw dbError;
 
-      alert("¡Registro exitoso!");
-      navigate("/");
-    } catch (error: any) {
-      console.error("Error en el proceso:", error);
-      alert("Error: " + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    alert("¡Registro exitoso!");
+    navigate("/");
+  } catch (error: any) {
+    console.error("Error en el proceso:", error);
+    alert("Error: " + error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const inputStyle = { padding: '10px', borderRadius: '5px', border: '1px solid #ccc', outline: 'none' };
 
