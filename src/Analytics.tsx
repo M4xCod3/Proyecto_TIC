@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import React from "react";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import {
   MapPinIcon,
@@ -40,9 +39,7 @@ if (SUPABASE_URL && SUPABASE_ANON_KEY) {
   supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
-const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-
-export const styles = {
+const styles = {
   container: {
     minHeight: "100vh",
     backgroundColor: "#0f172a",
@@ -62,8 +59,6 @@ export const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    flexWrap: "wrap", // Permite que el estado baje si la pantalla es muy angosta (móviles viejos)
-    gap: "8px",
   } as React.CSSProperties,
 
   headerLeft: {
@@ -85,14 +80,14 @@ export const styles = {
   } as React.CSSProperties,
 
   title: {
-    fontSize: isMobile ? "18px" : "20px", // Texto un pelo más chico en móviles
+    fontSize: "20px",
     fontWeight: "bold",
     color: "#22d3ee",
     margin: 0,
   } as React.CSSProperties,
 
   subtitle: {
-    fontSize: "13px",
+    fontSize: "14px",
     color: "#94a3b8",
     margin: 0,
   } as React.CSSProperties,
@@ -101,27 +96,26 @@ export const styles = {
     display: "flex",
     alignItems: "center",
     gap: "8px",
+    padding: "4px 12px",
+    borderRadius: "20px",
+    border: "1px solid #334155",
   } as React.CSSProperties,
 
   statusDot: {
     width: "8px",
     height: "8px",
-    backgroundColor: "#4ade80",
     borderRadius: "50%",
-    boxShadow: "0 0 8px #4ade80",
   } as React.CSSProperties,
 
   main: {
     maxWidth: "1200px",
     margin: "0 auto",
-    padding: isMobile ? "12px" : "16px", // Menos espacio muerto en las esquinas de celulares
+    padding: "16px",
     display: "grid",
-    // CAMBIO CLAVE: Si es móvil usa 1 sola columna. Si es desktop usa 2 columnas (2fr 1fr)
-    gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr", 
+    gridTemplateColumns: "1fr",
     gap: "16px",
   } as React.CSSProperties,
 
-  // Mantenemos este por compatibilidad, aunque la lógica ya se integró directo en 'main'
   mainDesktop: {
     gridTemplateColumns: "2fr 1fr",
   } as React.CSSProperties,
@@ -130,13 +124,11 @@ export const styles = {
     display: "flex",
     flexDirection: "column" as const,
     gap: "16px",
-    width: "100%", // Asegura que no desborde horizontalmente
   } as React.CSSProperties,
 
   statsGrid: {
     display: "grid",
-    // En móviles muy chicos las estadísticas bajan una por fila para no apretar los números
-    gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
+    gridTemplateColumns: "repeat(2, 1fr)",
     gap: "12px",
   } as React.CSSProperties,
 
@@ -157,7 +149,7 @@ export const styles = {
   } as React.CSSProperties,
 
   statValue: {
-    fontSize: isMobile ? "20px" : "24px", // Se ajusta para que calce bien en pantallas chicas
+    fontSize: "24px",
     fontWeight: "bold",
     margin: 0,
   } as React.CSSProperties,
@@ -167,7 +159,6 @@ export const styles = {
     borderRadius: "8px",
     border: "1px solid #334155",
     overflow: "hidden",
-    width: "100%",
   } as React.CSSProperties,
 
   cardHeader: {
@@ -181,23 +172,21 @@ export const styles = {
   } as React.CSSProperties,
 
   mapContainer: {
-    height: isMobile ? "260px" : "350px", // Un mapa un poco más bajo en móviles para no comerse toda la pantalla vertical
+    height: "350px",
     width: "100%",
     backgroundColor: "#334155",
   } as React.CSSProperties,
 
   tableContainer: {
-    overflowX: "auto" as const, // Permite scroll horizontal si la tabla de datos del tracker es muy ancha
+    overflowX: "auto" as const,
     maxHeight: "300px",
     overflowY: "auto" as const,
-    WebkitOverflowScrolling: "touch" as const, // Scroll fluido en iOS/Android
   } as React.CSSProperties,
 
   table: {
     width: "100%",
-    fontSize: "13px", // Reducimos un punto para que quepan más datos de telemetría sin romper columnas
+    fontSize: "14px",
     borderCollapse: "collapse" as const,
-    minWidth: isMobile ? "500px" : "auto", // Fuerza scroll horizontal interno en lugar de achatar celdas
   } as React.CSSProperties,
 
   th: {
@@ -220,8 +209,7 @@ export const styles = {
     border: "1px solid #334155",
     display: "flex",
     flexDirection: "column" as const,
-    height: isMobile ? "450px" : "600px", // Reducido para que conviva mejor con el resto del layout móvil abajo
-    width: "100%",
+    height: "600px",
   } as React.CSSProperties,
 
   chatMessages: {
@@ -292,28 +280,25 @@ export const styles = {
     alignItems: "center",
     justifyContent: "center",
     fontFamily: "'Segoe UI', sans-serif",
-    padding: "16px", // Evita que la caja de login/búsqueda pegue en los bordes del celular
   } as React.CSSProperties,
 
   centerContent: {
     textAlign: "center" as const,
-    padding: isMobile ? "12px" : "32px",
+    padding: "32px",
     maxWidth: "450px",
     width: "100%",
   } as React.CSSProperties,
 
   searchBox: {
     backgroundColor: "#1e293b",
-    padding: isMobile ? "20px 16px" : "32px", // Menos padding en celular para aprovechar espacio
+    padding: "32px",
     borderRadius: "12px",
     border: "1px solid #334155",
     boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5)",
-    width: "100%",
-    boxSizing: "border-box" as const,
   } as React.CSSProperties,
 
   searchTitle: {
-    fontSize: isMobile ? "20px" : "24px",
+    fontSize: "24px",
     fontWeight: "bold",
     marginBottom: "8px",
     color: "#ffffff",
@@ -327,7 +312,7 @@ export const styles = {
     padding: "12px 16px",
     color: "#ffffff",
     fontSize: "16px",
-    marginTop: isMobile ? "16px" : "24px",
+    marginTop: "24px",
     marginBottom: "16px",
     outline: "none",
     boxSizing: "border-box" as const,
@@ -349,7 +334,7 @@ export const styles = {
     gap: "8px",
     transition: "background-color 0.2s",
   } as React.CSSProperties,
-
+  
   badge: {
     padding: "2px 8px",
     borderRadius: "4px",
@@ -358,10 +343,11 @@ export const styles = {
 };
 
 export default function Analytics() {
-  const [activePedidoId, setActivePedidoId] = useState<string>("");
+  const [activePedidoId, setActivePedidoId] = useState<string>("").trim();
   const [searchInput, setSearchInput] = useState<string>("");
   
   const [data, setData] = useState<PedidoMonitoreo[]>([]);
+  const [pedidoEstado, setPedidoEstado] = useState<string>("En tránsito"); // Modificación: Estado real de la orden
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -391,7 +377,30 @@ export default function Analytics() {
       }
 
       try {
-        // Consultamos solo los datos del pedido ingresado
+        // 1. MODIFICACIÓN: Consultar primero el estado de la orden en la tabla relacional 'pedido'
+        const { data: ordenInfo, error: ordenError } = await supabase
+          .from("pedido")
+          .select("estado")
+          .eq("codigo_pedido", activePedidoId)
+          .maybeSingle();
+
+        if (ordenError) {
+          setError("Error obteniendo orden: " + ordenError.message);
+          setLoading(false);
+          return;
+        }
+
+        // Si existe el pedido, actualizamos su estado real (En tránsito, Entregado, etc.)
+        if (ordenInfo) {
+          setPedidoEstado(ordenInfo.estado);
+        } else {
+          // Si el código no está en la tabla 'pedido', devolvemos error directo
+          setData([]);
+          setLoading(false);
+          return;
+        }
+
+        // 2. Consultamos los datos de telemetría del pedido ingresado
         const { data: pedidos, error: queryError } = await supabase
           .from("pedidos_monitoreo")
           .select("*")
@@ -409,13 +418,13 @@ export default function Analytics() {
         
         // Mensaje de bienvenida del chat personalizado
         setChatMessages([
-          { role: "assistant", content: `Hola! Soy el asistente de Log-Cold. Estoy monitoreando el pedido #${activePedidoId}. ¿Qué necesitas saber?` }
+          { role: "assistant", content: `¡Hola! Soy el asistente de Log-Cold. Estoy monitoreando el pedido #${activePedidoId}. ¿Qué necesitas saber?` }
         ]);
         
         setLoading(false);
 
-        // Suscripción en tiempo real solo para este pedido específico
-        const channel = supabase
+        // 3. Suscripción en tiempo real a la telemetría
+        const telemetriaChannel = supabase
           .channel(`pedido_realtime_${activePedidoId}`)
           .on(
             "postgres_changes",
@@ -432,8 +441,28 @@ export default function Analytics() {
           )
           .subscribe();
 
+        // 4. MODIFICACIÓN: Suscripción en tiempo real al estado del viaje en la tabla 'pedido'
+        const estadoChannel = supabase
+          .channel(`pedido_estado_${activePedidoId}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "UPDATE",
+              schema: "public",
+              table: "pedido",
+              filter: `codigo_pedido=eq.${activePedidoId}`
+            },
+            (payload) => {
+              if (payload.new && "estado" in payload.new) {
+                setPedidoEstado((payload.new as any).estado);
+              }
+            }
+          )
+          .subscribe();
+
         return () => {
-          channel.unsubscribe();
+          telemetriaChannel.unsubscribe();
+          estadoChannel.unsubscribe();
         };
       } catch (err) {
         setError("Error: " + (err instanceof Error ? err.message : "Desconocido"));
@@ -459,6 +488,7 @@ export default function Analytics() {
     setActivePedidoId("");
     setSearchInput("");
     setData([]);
+    setPedidoEstado("En tránsito");
     setChatMessages([]);
   };
 
@@ -468,7 +498,7 @@ export default function Analytics() {
     const avgTemp = data.reduce((sum, d) => sum + d.temperatura, 0) / data.length;
     const avgHum = data.reduce((sum, d) => sum + d.humedad, 0) / data.length;
     const alertCount = data.filter(d => d.alerta !== "OK").length;
-    let status = "OPTIMO";
+    let status = pedidoEstado.toUpperCase(); // Usa el estado oficial de la BD
     if (latest.temperatura < 2 || latest.temperatura > 8) status = "ALERTA TEMPERATURA";
     if (latest.humedad < 60 || latest.humedad > 95) status = "ALERTA HUMEDAD";
     if (latest.alerta !== "OK") status = "ALERTA ACTIVA";
@@ -490,17 +520,17 @@ export default function Analytics() {
         response = "No hay datos disponibles para este pedido aún.";
       } else {
         if (lowerMsg.includes("estado") || lowerMsg.includes("como")) {
-          response = `Estado: ${analysis.status}\nTemp: ${analysis.latest.temperatura.toFixed(1)}C\nHumedad: ${analysis.latest.humedad.toFixed(1)}%\nUbicacion: ${analysis.latest.latitud.toFixed(4)}, ${analysis.latest.longitud.toFixed(4)}`;
+          response = `Estado actual del envío: ${pedidoEstado}\nAlertas del sensor: ${analysis.status}\nTemp: ${analysis.latest.temperatura.toFixed(1)}°C\nHumedad: ${analysis.latest.humedad.toFixed(1)}%\nUbicación: ${analysis.latest.latitud.toFixed(4)}, ${analysis.latest.longitud.toFixed(4)}`;
         } else if (lowerMsg.includes("temp")) {
-          response = `Temperatura actual: ${analysis.latest.temperatura.toFixed(1)}C\nPromedio del viaje: ${analysis.avgTemp.toFixed(1)}C\nRango optimo: 2-8C`;
+          response = `Temperatura actual: ${analysis.latest.temperatura.toFixed(1)}°C\nPromedio del viaje: ${analysis.avgTemp.toFixed(1)}°C\nRango óptimo: 2-8°C`;
         } else if (lowerMsg.includes("hum")) {
-          response = `Humedad actual: ${analysis.latest.humedad.toFixed(1)}%\nPromedio del viaje: ${analysis.avgHum.toFixed(1)}%\nRango optimo: 60-95%`;
+          response = `Humedad actual: ${analysis.latest.humedad.toFixed(1)}%\nPromedio del viaje: ${analysis.avgHum.toFixed(1)}%\nRango óptimo: 60-95%`;
         } else if (lowerMsg.includes("ubic") || lowerMsg.includes("gps") || lowerMsg.includes("donde")) {
-          response = `Ubicacion GPS actual:\nLat: ${analysis.latest.latitud.toFixed(6)}\nLon: ${analysis.latest.longitud.toFixed(6)}`;
+          response = `Ubicación GPS actual:\nLat: ${analysis.latest.latitud.toFixed(6)}\nLon: ${analysis.latest.longitud.toFixed(6)}`;
         } else if (lowerMsg.includes("alerta") || lowerMsg.includes("problema")) {
-          response = analysis.alertCount > 0 ? `Se han registrado ${analysis.alertCount} alertas térmicas en este trayecto.` : "El trayecto se ha mantenido sin alertas, todo OK.";
+          response = analysis.alertCount > 0 ? `Se han registrado ${analysis.alertCount} alertas térmicas en este trayecto.` : "El trayecto se ha mantenido sin alertas críticas, todo OK.";
         } else {
-          response = "Puedo informarte sobre: estado general, temperatura, humedad, ubicación GPS o alertas del pedido.";
+          response = "Puedo informarte sobre: el estado general del envío, temperatura de los sensores, humedad, ubicación GPS o alertas históricas del pedido.";
         }
       }
       setChatMessages(prev => [...prev, { role: "assistant", content: response }]);
@@ -510,6 +540,24 @@ export default function Analytics() {
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
   };
+
+  // MODIFICACIÓN: Helper para pintar el Badge según el estado real de la BD
+  const getStatusColor = () => {
+    switch (pedidoEstado.toLowerCase()) {
+      case "en tránsito":
+      case "en transito":
+        return { dot: "#4ade80", text: "#4ade80", bg: "rgba(74, 222, 128, 0.1)" };
+      case "entregado":
+        return { dot: "#60a5fa", text: "#60a5fa", bg: "rgba(96, 165, 250, 0.1)" };
+      case "crítico":
+      case "critico":
+        return { dot: "#f87171", text: "#f87171", bg: "rgba(248, 113, 113, 0.1)" };
+      default:
+        return { dot: "#94a3b8", text: "#94a3b8", bg: "rgba(148, 147, 184, 0.1)" };
+    }
+  };
+
+  const currentStatusStyle = getStatusColor();
 
   // 1. PANTALLA DE INGRESO (Login del Tracking)
   if (!activePedidoId) {
@@ -526,7 +574,7 @@ export default function Analytics() {
             <form onSubmit={handleSearchSubmit}>
               <input
                 type="text"
-                placeholder="Ej: 1001"
+                placeholder="Ej: NOW-PE-102"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 style={styles.searchInput}
@@ -582,8 +630,8 @@ export default function Analytics() {
       <div style={styles.centerScreen}>
         <div style={styles.centerContent}>
           <PackageIcon style={{ width: 48, height: 48, color: "#fbbf24", margin: "0 auto" }} />
-          <h2 style={{ margin: "16px 0 8px" }}>Pedido No Encontrado</h2>
-          <p style={{ color: "#94a3b8" }}>No hemos recibido datos de telemetría para el pedido <strong>#{activePedidoId}</strong>. Asegúrate de que el Gateway esté encendido y transmitiendo.</p>
+          <h2 style={{ margin: "16px 0 8px" }}>Pedido Inicializado</h2>
+          <p style={{ color: "#94a3b8" }}>El viaje <strong>#{activePedidoId}</strong> está registrado en el sistema con estado <strong>"{pedidoEstado}"</strong>, pero el ESP32 asignado aún no envía su primera lectura de sensores.</p>
           <button onClick={handleReset} style={{...styles.searchMainButton, marginTop: "24px"}}>Buscar otro pedido</button>
         </div>
       </div>
@@ -606,9 +654,10 @@ export default function Analytics() {
               <p style={styles.subtitle}>Log-Cold Tracking System</p>
             </div>
           </div>
-          <div style={styles.statusBadge}>
-            <span style={styles.statusDot} />
-            <span style={{ fontSize: 14, color: "#4ade80", fontWeight: 600 }}>En Tránsito</span>
+          {/* MODIFICACIÓN: El Badge ahora cambia de color y texto dinámicamente con la BD */}
+          <div style={{ ...styles.statusBadge, backgroundColor: currentStatusStyle.bg, borderColor: currentStatusStyle.text }}>
+            <span style={{ ...styles.statusDot, backgroundColor: currentStatusStyle.dot, boxShadow: `0 0 8px ${currentStatusStyle.dot}` }} />
+            <span style={{ fontSize: 14, color: currentStatusStyle.text, fontWeight: 600 }}>{pedidoEstado}</span>
           </div>
         </div>
       </header>
@@ -623,7 +672,9 @@ export default function Analytics() {
                 <ThermometerIcon style={{ width: 16, height: 16 }} />
                 <span>Temperatura</span>
               </div>
-              <p style={{ ...styles.statValue, color: "#22d3ee" }}>{latestData.temperatura.toFixed(1)}°C</p>
+              <p style={{ ...styles.statValue, color: latestData.temperatura >= 2 && latestData.temperatura <= 8 ? "#22d3ee" : "#f87171" }}>
+                {latestData.temperatura.toFixed(1)}°C
+              </p>
             </div>
             <div style={styles.statCard}>
               <div style={styles.statLabel}>
