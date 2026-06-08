@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { ArrowLeft } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 // 1. Inicializamos Supabase fuera del componente
 const supabase = createClient(
@@ -22,43 +21,44 @@ export default function RegisterLocal() {
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (formData.password !== formData.confirmPassword) {
-    alert("Las contraseñas no coinciden.");
-    return;
-  }
+    if (formData.password !== formData.confirmPassword) {
+      alert("Las contraseñas no coinciden.");
+      return;
+    }
 
-  setLoading(true);
+    setLoading(true);
 
-  try {
-    // 1. Registro en Auth
-    const { error: authError } = await supabase.auth.signUp({
-      email: formData.email,
-      password: formData.password,
-    });
+    try {
+      // 1. Registro en Auth
+      const { error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+      });
 
-    if (authError) throw authError;
+      if (authError) throw authError;
 
-    // 2. Insert en tabla locales (Solo con tus columnas)
-    const { error: dbError } = await supabase.from("locales").insert([{ 
-      nombre_local: formData.nombre_local, 
-      correo: formData.email, 
-      direccion: formData.direccion, 
-      dueno: formData.dueno
-    }]);
+      // 2. Upsert en tabla locales (Usa el correo como conflicto)
+      // Si el correo ya existe, actualiza los datos en lugar de fallar
+      const { error: dbError } = await supabase.from("locales").upsert([{ 
+        nombre_local: formData.nombre_local, 
+        correo: formData.email, 
+        direccion: formData.direccion, 
+        dueno: formData.dueno
+      }], { onConflict: 'correo' }); 
 
-    if (dbError) throw dbError;
+      if (dbError) throw dbError;
 
-    alert("¡Registro exitoso!");
-    navigate("/");
-  } catch (error: any) {
-    console.error("Error en el proceso:", error);
-    alert("Error: " + error.message);
-  } finally {
-    setLoading(false);
-  }
-};
+      alert("¡Registro exitoso!");
+      navigate("/");
+    } catch (error: any) {
+      console.error("Error en el proceso:", error);
+      alert("Error: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const inputStyle = { padding: '10px', borderRadius: '5px', border: '1px solid #ccc', outline: 'none' };
 
