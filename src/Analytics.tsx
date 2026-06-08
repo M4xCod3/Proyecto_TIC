@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-// Importación de la instancia de Supabase (ajusta la ruta según tu proyecto)
-const supabase = (window as any).supabase; // Cambia esto por tu import real si usas un archivo lib/supabase
+// 🌟 1. Importación oficial de Supabase
+import { createClient } from "@supabase/supabase-js";
 
 import { 
   Package as PackageIcon, 
@@ -16,7 +16,17 @@ import {
   Send as SendIcon 
 } from "lucide-react";
 
-// 1. Interfaces corregidas con base en tu BD real
+// 🌟 2. Inicialización segura del cliente con soporte para Astro y Vite
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL || "";
+const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error("⚠️ ALERTA LOG-COLD: No se encontraron las variables de entorno de Supabase en tu archivo .env");
+}
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Interfaces de la Base de Datos y Componentes
 interface PedidoMonitoreo {
   idx: number;
   id: number;
@@ -33,7 +43,7 @@ interface PedidoMonitoreo {
 
 interface LocalItem {
   id: string;         // UUID del local
-  nombre_local: string; // 🌟 CORREGIDO: Antes decía 'nombre'
+  nombre_local: string; // Columna real de tu tabla 'locales'
 }
 
 interface ChatMessage {
@@ -48,7 +58,7 @@ export default function Analytics() {
   const [searchInput, setSearchInput] = useState<string>(""); 
   const [localInput, setLocalInput] = useState<string>("");     
 
-  // Lista de locales cargados
+  // Lista de locales cargados desde Supabase
   const [localesList, setLocalesList] = useState<LocalItem[]>([]);
 
   // Estados del Dashboard de Datos
@@ -69,42 +79,35 @@ export default function Analytics() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // EFECTO 1: Carga inicial de locales (CORREGIDO con 'nombre_local')
+  // EFECTO 1: Carga inicial de locales desde Supabase
   useEffect(() => {
     const cargarLocales = async () => {
-      if (!supabase) return;
       try {
         const { data: locales, error: localesError } = await supabase
           .from("locales")
-          .select("id, nombre_local") // 🌟 CORREGIDO
-          .order("nombre_local", { ascending: true }); // 🌟 CORREGIDO
+          .select("id, nombre_local") 
+          .order("nombre_local", { ascending: true });
 
         if (!localesError && locales) {
           setLocalesList(locales);
         } else if (localesError) {
-          console.error("Error de Supabase:", localesError.message);
+          console.error("Error de query en Supabase:", localesError.message);
         }
       } catch (err) {
-        console.error("Error al obtener los locales:", err);
+        console.error("Error crítico de red al obtener los locales:", err);
       }
     };
 
     cargarLocales();
   }, []);
 
-  // EFECTO 2: Consulta de Telemetría Realtime con tipos explícitos
+  // EFECTO 2: Consulta de Telemetría Realtime con payload tipado explícitamente
   useEffect(() => {
     if (!activePedidoId || !activeLocalId) return;
 
     const fetchData = async () => {
       setLoading(true);
       setError(null);
-      
-      if (!supabase) {
-        setError("Supabase no configurado en el proyecto.");
-        setLoading(false);
-        return;
-      }
 
       try {
         const { data: pedidos, error: queryError } = await supabase
@@ -123,7 +126,6 @@ export default function Analytics() {
 
         setData(pedidos || []);
         
-        // CORREGIDO: Mapeo de nombre_local para el Asistente IA
         const nombreLocal = localesList.find(l => l.id === activeLocalId)?.nombre_local || "Local seleccionado";
 
         setChatMessages([
@@ -135,6 +137,7 @@ export default function Analytics() {
         
         setLoading(false);
 
+        // Suscripción en Tiempo Real vía WebSockets a PostgreSQL
         const telemetriaChannel = supabase
           .channel(`pedido_realtime_${activeLocalId}_${activePedidoId}`)
           .on(
@@ -145,7 +148,7 @@ export default function Analytics() {
               table: "pedidos_monitoreo",
               filter: `id_pedido=eq.${activePedidoId}`
             },
-            (payload: any) => { // Evita el error de tipo implícito 'any'
+            (payload: any) => { // 🌟 Corregido: Evita error implícito 'any'
               const newRecord = payload.new as PedidoMonitoreo;
               if (newRecord.id_local === activeLocalId) {
                 setData(prev => [newRecord, ...prev].slice(0, 500));
@@ -287,7 +290,7 @@ export default function Analytics() {
                   <option value="" disabled>-- Selecciona un Local --</option>
                   {localesList.map((local) => (
                     <option key={local.id} value={local.id}>
-                      {local.nombre_local} {/* 🌟 CORREGIDO */}
+                      {local.nombre_local} 
                     </option>
                   ))}
                 </select>
@@ -371,13 +374,13 @@ export default function Analytics() {
     );
   }
 
-  // VISTA 5: DASHBOARD DE RASTREO
+  // VISTA 5: DASHBOARD DE RASTREO COMPLETO
   const latestData = data[0];
   const nombreLocalActivo = localesList.find(l => l.id === activeLocalId)?.nombre_local || activeLocalId;
 
   return (
     <div style={styles.container}>
-      {/* Encabezado del Dashboard */}
+      {/* Encabezado */}
       <header style={styles.header}>
         <div style={styles.headerContent}>
           <div style={styles.headerLeft}>
@@ -396,13 +399,12 @@ export default function Analytics() {
         </div>
       </header>
 
-      {/* Contenedor Principal */}
+      {/* Contenido principal */}
       <main style={{ ...styles.main, ...(isDesktop ? styles.mainDesktop : {}) }}>
         
-        {/* Columna Izquierda */}
+        {/* Paneles de datos */}
         <div style={styles.leftColumn}>
           <div style={{ ...styles.statsGrid, gridTemplateColumns: isDesktop ? "repeat(4, 1fr)" : "repeat(2, 1fr)" }}>
-            {/* Temperatura */}
             <div style={styles.statCard}>
               <div style={styles.statLabel}>
                 <ThermometerIcon style={{ width: 16, height: 16 }} />
@@ -413,7 +415,6 @@ export default function Analytics() {
               </p>
             </div>
             
-            {/* Humedad */}
             <div style={styles.statCard}>
               <div style={styles.statLabel}>
                 <DropletIcon style={{ width: 16, height: 16 }} />
@@ -422,7 +423,6 @@ export default function Analytics() {
               <p style={{ ...styles.statValue, color: "#60a5fa" }}>{latestData.humedad.toFixed(1)}%</p>
             </div>
             
-            {/* Ubicación GPS */}
             <div style={styles.statCard}>
               <div style={styles.statLabel}>
                 <MapPinIcon style={{ width: 16, height: 16 }} />
@@ -433,7 +433,6 @@ export default function Analytics() {
               </p>
             </div>
             
-            {/* Alerta */}
             <div style={styles.statCard}>
               <div style={styles.statLabel}>
                 {latestData.alerta === "OK" ? (
@@ -467,7 +466,7 @@ export default function Analytics() {
             </div>
           </div>
 
-          {/* Historial */}
+          {/* Tabla de Historial */}
           <div style={styles.card}>
             <div style={styles.cardHeader}>Historial de Muestreos Sincronizados</div>
             <div style={styles.tableContainer}>
@@ -512,7 +511,7 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* Columna Derecha: Chat */}
+        {/* Panel de Chat */}
         <div style={styles.chatContainer}>
           <div style={styles.cardHeader}>
             <BotIcon style={{ width: 18, height: 18, color: "#22d3ee", marginRight: 8 }} />
@@ -548,7 +547,7 @@ export default function Analytics() {
   );
 }
 
-// 2. Estilos CSS Inline Optimizados (Evita solapamientos visuales)
+// Estilos de Interfaz
 const styles: { [key: string]: React.CSSProperties } = {
   centerScreen: {
     display: "flex", justifyContent: "center", alignItems: "center",
@@ -561,15 +560,9 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   searchTitle: { fontSize: "24px", fontWeight: 700, color: "#f8fafc", marginBottom: "8px" },
   formGroup: {
-    marginBottom: "20px",
-    textAlign: "left",
-    display: "flex",
-    flexDirection: "column",
-    gap: "6px"
+    marginBottom: "20px", textAlign: "left", display: "flex", flexDirection: "column", gap: "6px"
   },
-  formLabel: {
-    color: "#94a3b8", fontSize: "12px", fontWeight: 500, display: "block"
-  },
+  formLabel: { color: "#94a3b8", fontSize: "12px", fontWeight: 500, display: "block" },
   selectInput: {
     width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #475569",
     backgroundColor: "#0f172a", color: "#f8fafc", fontSize: "14px", outline: "none",
@@ -590,13 +583,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     minHeight: "100vh", backgroundColor: "#0f172a", color: "#f8fafc",
     display: "flex", flexDirection: "column", fontFamily: "sans-serif"
   },
-  header: {
-    backgroundColor: "#1e293b", borderBottom: "1px solid #334155", padding: "16px 24px"
-  },
-  headerContent: {
-    display: "flex", justifyContent: "space-between", alignItems: "center",
-    maxWidth: "1400px", margin: "0 auto", width: "100%"
-  },
+  header: { backgroundColor: "#1e293b", borderBottom: "1px solid #334155", padding: "16px 24px" },
+  headerContent: { display: "flex", justifyContent: "space-between", alignItems: "center", maxWidth: "1400px", margin: "0 auto", width: "100%" },
   headerLeft: { display: "flex", alignItems: "center", gap: "16px" },
   backButton: {
     backgroundColor: "transparent", border: "1px solid #475569", color: "#94a3b8",
@@ -604,59 +592,29 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   title: { fontSize: "20px", fontWeight: 700, margin: 0 },
   subtitle: { fontSize: "13px", color: "#94a3b8", margin: "2px 0 0 0" },
-  statusBadge: {
-    display: "flex", alignItems: "center", gap: "8px", padding: "6px 14px",
-    borderRadius: "20px", border: "1px solid"
-  },
+  statusBadge: { display: "flex", alignItems: "center", gap: "8px", padding: "6px 14px", borderRadius: "20px", border: "1px solid" },
   statusDot: { width: "8px", height: "8px", borderRadius: "50%" },
-  main: {
-    padding: "20px", maxWidth: "1400px", margin: "0 auto", width: "100%",
-    boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "20px"
-  },
+  main: { padding: "20px", maxWidth: "1400px", margin: "0 auto", width: "100%", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "20px" },
   mainDesktop: { flexDirection: "row", alignItems: "flex-start" },
   leftColumn: { flex: 2, display: "flex", flexDirection: "column", gap: "20px", minWidth: 0 },
   statsGrid: { display: "grid", gap: "12px", width: "100%" },
-  statCard: {
-    backgroundColor: "#1e293b", padding: "16px", borderRadius: "12px",
-    border: "1px solid #334155", display: "flex", flexDirection: "column", justifyContent: "center"
-  },
+  statCard: { backgroundColor: "#1e293b", padding: "16px", borderRadius: "12px", border: "1px solid #334155", display: "flex", flexDirection: "column", justifyContent: "center" },
   statLabel: { display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#94a3b8" },
   statValue: { fontSize: "22px", fontWeight: 700, margin: "8px 0 0 0" },
-  card: {
-    backgroundColor: "#1e293b", borderRadius: "12px", border: "1px solid #334155",
-    overflow: "hidden", display: "flex", flexDirection: "column"
-  },
-  cardHeader: {
-    padding: "14px 18px", borderBottom: "1px solid #334155", fontWeight: 600,
-    fontSize: "14px", color: "#e2e8f0", display: "flex", alignItems: "center"
-  },
+  card: { backgroundColor: "#1e293b", borderRadius: "12px", border: "1px solid #334155", overflow: "hidden", display: "flex", flexDirection: "column" },
+  cardHeader: { padding: "14px 18px", borderBottom: "1px solid #334155", fontWeight: 600, fontSize: "14px", color: "#e2e8f0", display: "flex", alignItems: "center" },
   mapContainer: { height: "320px", width: "100%", backgroundColor: "#0f172a" },
   tableContainer: { overflowX: "auto", width: "100%" },
   table: { width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "13px" },
   th: { padding: "12px 18px", borderBottom: "1px solid #334155", color: "#94a3b8", fontWeight: 500 },
   td: { padding: "12px 18px", borderBottom: "1px solid #334155", color: "#e2e8f0" },
   badge: { padding: "4px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 600 },
-  chatContainer: {
-    flex: 1, backgroundColor: "#1e293b", borderRadius: "12px", border: "1px solid #334155",
-    display: "flex", flexDirection: "column", height: "550px", position: "sticky", top: "20px"
-  },
+  chatContainer: { flex: 1, backgroundColor: "#1e293b", borderRadius: "12px", border: "1px solid #334155", display: "flex", flexDirection: "column", height: "550px", position: "sticky", top: "20px" },
   chatMessages: { flex: 1, padding: "16px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "12px" },
-  userMessage: {
-    alignSelf: "flex-end", backgroundColor: "#06b6d4", color: "#0f172a",
-    padding: "10px 14px", borderRadius: "12px 12px 0 12px", maxWidth: "80%", fontSize: "13px", fontWeight: 500
-  },
-  assistantMessage: {
-    alignSelf: "flex-start", backgroundColor: "#334155", color: "#f8fafc",
-    padding: "10px 14px", borderRadius: "12px 12px 12px 0", maxWidth: "80%", fontSize: "13px", whiteSpace: "pre-line"
-  },
+  userMessage: { alignSelf: "flex-end", backgroundColor: "#06b6d4", color: "#0f172a", padding: "10px 14px", borderRadius: "12px 12px 0 12px", maxWidth: "80%", fontSize: "13px", fontWeight: 500 },
+  assistantMessage: { alignSelf: "flex-start", backgroundColor: "#334155", color: "#f8fafc", padding: "10px 14px", borderRadius: "12px 12px 12px 0", maxWidth: "80%", fontSize: "13px", whiteSpace: "pre-line" },
   chatInputContainer: { padding: "14px", borderTop: "1px solid #334155", backgroundColor: "#1e293b" },
   chatInputRow: { display: "flex", gap: "8px" },
-  chatInput: {
-    flex: 1, padding: "10px 14px", borderRadius: "8px", border: "1px solid #475569",
-    backgroundColor: "#0f172a", color: "#f8fafc", fontSize: "13px", outline: "none"
-  },
-  chatButton: {
-    backgroundColor: "#06b6d4", color: "#0f172a", border: "none", padding: "0 14px",
-    borderRadius: "8px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center"
-  }
+  chatInput: { flex: 1, padding: "10px 14px", borderRadius: "8px", border: "1px solid #475569", backgroundColor: "#0f172a", color: "#f8fafc", fontSize: "13px", outline: "none" },
+  chatButton: { backgroundColor: "#06b6d4", color: "#0f172a", border: "none", padding: "0 14px", borderRadius: "8px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }
 };
