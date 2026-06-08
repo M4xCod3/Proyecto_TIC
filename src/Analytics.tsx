@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef } from "react";
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
-// Si ya tienes un cliente exportado en tu app, usa algo como: import { supabase } from "@/lib/supabase";
-const supabase = (window as any).supabase; // Placeholder por si lo manejas global, adáptalo a tu import real.
+import React, { useState, useEffect, useRef } from "react";
+// Importación de la instancia de Supabase (ajusta la ruta según tu proyecto)
+const supabase = (window as any).supabase; // Cambia esto por tu import real si usas un archivo lib/supabase
 
 import { 
   Package as PackageIcon, 
@@ -17,7 +16,7 @@ import {
   Send as SendIcon 
 } from "lucide-react";
 
-// 1. Interfaces basadas exactamente en tu esquema de base de datos
+// 1. Interfaces corregidas con base en tu BD real
 interface PedidoMonitoreo {
   idx: number;
   id: number;
@@ -28,13 +27,13 @@ interface PedidoMonitoreo {
   humedad: number;
   alerta: string;
   hardware_id: string;
-  id_pedido: string; // Ej: "1001"
-  id_local: string;  // Ej: "3a5c8786-1b7c-46a1-a5cf-75f1862f918b"
+  id_pedido: string; 
+  id_local: string;  
 }
 
 interface LocalItem {
-  id: string;     // UUID del local
-  nombre: string; // Nombre legible (ej: 'Sucursal Norte')
+  id: string;         // UUID del local
+  nombre_local: string; // 🌟 CORREGIDO: Antes decía 'nombre'
 }
 
 interface ChatMessage {
@@ -46,10 +45,10 @@ export default function Analytics() {
   // Estados de control de Filtros de Búsqueda
   const [activePedidoId, setActivePedidoId] = useState<string>("");
   const [activeLocalId, setActiveLocalId] = useState<string>(""); 
-  const [searchInput, setSearchInput] = useState<string>(""); // Guarda el texto del id_pedido
-  const [localInput, setLocalInput] = useState<string>("");     // Guarda el UUID del local seleccionado
+  const [searchInput, setSearchInput] = useState<string>(""); 
+  const [localInput, setLocalInput] = useState<string>("");     
 
-  // Estado para la lista de locales del desplegable
+  // Lista de locales cargados
   const [localesList, setLocalesList] = useState<LocalItem[]>([]);
 
   // Estados del Dashboard de Datos
@@ -64,25 +63,26 @@ export default function Analytics() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
 
-  // Manejador del tamaño de pantalla para diseño responsivo
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // EFECTO 1: Carga inicial de locales para poblar el menú desplegable (Select)
+  // EFECTO 1: Carga inicial de locales (CORREGIDO con 'nombre_local')
   useEffect(() => {
     const cargarLocales = async () => {
       if (!supabase) return;
       try {
         const { data: locales, error: localesError } = await supabase
           .from("locales")
-          .select("id, nombre")
-          .order("nombre", { ascending: true });
+          .select("id, nombre_local") // 🌟 CORREGIDO
+          .order("nombre_local", { ascending: true }); // 🌟 CORREGIDO
 
         if (!localesError && locales) {
           setLocalesList(locales);
+        } else if (localesError) {
+          console.error("Error de Supabase:", localesError.message);
         }
       } catch (err) {
         console.error("Error al obtener los locales:", err);
@@ -92,7 +92,7 @@ export default function Analytics() {
     cargarLocales();
   }, []);
 
-  // EFECTO 2: Consulta de Telemetría por Filtro Compuesto (id_pedido AND id_local) + Realtime
+  // EFECTO 2: Consulta de Telemetría Realtime con tipos explícitos
   useEffect(() => {
     if (!activePedidoId || !activeLocalId) return;
 
@@ -107,7 +107,6 @@ export default function Analytics() {
       }
 
       try {
-        // Consulta inicial con el doble filtro estricto
         const { data: pedidos, error: queryError } = await supabase
           .from("pedidos_monitoreo")
           .select("*")
@@ -124,19 +123,18 @@ export default function Analytics() {
 
         setData(pedidos || []);
         
-        // Buscar el nombre del local para personalizar el mensaje de la IA
-        const nombreLocal = localesList.find(l => l.id === activeLocalId)?.nombre || "Local seleccionado";
+        // CORREGIDO: Mapeo de nombre_local para el Asistente IA
+        const nombreLocal = localesList.find(l => l.id === activeLocalId)?.nombre_local || "Local seleccionado";
 
         setChatMessages([
           { 
             role: "assistant", 
-            content: `¡Hola! Soy el asistente analítico de Log-Cold. Estoy monitoreando el pedido #${activePedidoId} proveniente de la sucursal: "${nombreLocal}". ¿Qué métrica deseas evaluar?` 
+            content: `¡Hola! Soy el asistente analítico de Log-Cold. Estoy monitoreando el pedido #${activePedidoId} de la sucursal: "${nombreLocal}". ¿Qué métrica deseas evaluar?` 
           }
         ]);
         
         setLoading(false);
 
-        // Suscripción Realtime a Postgres aplicando el filtro por código de pedido
         const telemetriaChannel = supabase
           .channel(`pedido_realtime_${activeLocalId}_${activePedidoId}`)
           .on(
@@ -147,9 +145,8 @@ export default function Analytics() {
               table: "pedidos_monitoreo",
               filter: `id_pedido=eq.${activePedidoId}`
             },
-            (payload: any) => { // 🌟 SOLUCIÓN: Agregamos ": any" explícito aquí
+            (payload: any) => { // Evita el error de tipo implícito 'any'
               const newRecord = payload.new as PedidoMonitoreo;
-              // Filtro en el cliente para asegurar que el insert pertenece al mismo id_local
               if (newRecord.id_local === activeLocalId) {
                 setData(prev => [newRecord, ...prev].slice(0, 500));
               }
@@ -169,12 +166,10 @@ export default function Analytics() {
     fetchData();
   }, [activePedidoId, activeLocalId, localesList]);
 
-  // Auto-scroll del chat de soporte
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
-  // Procesar envío del formulario de rastreo
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchInput.trim() && localInput) {
@@ -183,7 +178,6 @@ export default function Analytics() {
     }
   };
 
-  // Limpiar estados y regresar a la pantalla de búsqueda
   const handleReset = () => {
     setActivePedidoId("");
     setActiveLocalId("");
@@ -194,7 +188,6 @@ export default function Analytics() {
     setChatMessages([]);
   };
 
-  // Función de análisis de telemetría en tiempo real
   const analyzeData = () => {
     if (data.length === 0) return null;
     const latest = data[0];
@@ -210,7 +203,6 @@ export default function Analytics() {
     return { status, latest, avgTemp, avgHum, alertCount, total: data.length };
   };
 
-  // Procesamiento de mensajes en el chat de IA
   const handleSendMessage = () => {
     if (!chatInput.trim()) return;
     const userMessage = chatInput.trim();
@@ -268,7 +260,7 @@ export default function Analytics() {
 
   const currentStatusStyle = getStatusColor();
 
-  // VISTA 1: INTERFAZ DE LOG-IN / BÚSQUEDA (Con Select por nombre de local y código de pedido)
+  // VISTA 1: INTERFAZ DE LOG-IN / BÚSQUEDA
   if (!activePedidoId || !activeLocalId) {
     return (
       <div style={styles.centerScreen}>
@@ -282,8 +274,8 @@ export default function Analytics() {
             
             <form onSubmit={handleSearchSubmit}>
               {/* Desplegable Dinámico de Locales */}
-              <div style={{ marginBottom: "18px", textAlign: "left" }}>
-                <label style={{ color: "#94a3b8", fontSize: "12px", display: "block", marginBottom: "6px", fontWeight: 500 }}>
+              <div style={styles.formGroup}>
+                <label style={styles.formLabel}>
                   Establecimiento / Local Comercial
                 </label>
                 <select
@@ -295,15 +287,15 @@ export default function Analytics() {
                   <option value="" disabled>-- Selecciona un Local --</option>
                   {localesList.map((local) => (
                     <option key={local.id} value={local.id}>
-                      {local.nombre}
+                      {local.nombre_local} {/* 🌟 CORREGIDO */}
                     </option>
                   ))}
                 </select>
               </div>
 
               {/* Input de Código de Pedido */}
-              <div style={{ marginBottom: "24px", textAlign: "left" }}>
-                <label style={{ color: "#94a3b8", fontSize: "12px", display: "block", marginBottom: "6px", fontWeight: 500 }}>
+              <div style={styles.formGroup}>
+                <label style={styles.formLabel}>
                   Código Identificador del Pedido
                 </label>
                 <input
@@ -341,7 +333,7 @@ export default function Analytics() {
       <div style={styles.centerScreen}>
         <div style={styles.centerContent}>
           <RefreshCwIcon style={{ width: 48, height: 48, color: "#22d3ee", animation: "spin 1s linear infinite", margin: "0 auto" }} />
-          <p style={{ color: "#94a3b8", marginTop: 16 }}>Sincronizando flujo de telemetría para pedido #{activePedidoId}...</p>
+          <p style={{ color: "#94a3b8", marginTop: 16 }}>Sincronizando flujo de telemetría...</p>
         </div>
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
@@ -364,14 +356,14 @@ export default function Analytics() {
 
   // VISTA 4: PANTALLA DE ESPERA DE DATOS (Vacío)
   if (data.length === 0) {
-    const nombreLocalActual = localesList.find(l => l.id === activeLocalId)?.nombre || activeLocalId;
+    const nombreLocalActual = localesList.find(l => l.id === activeLocalId)?.nombre_local || activeLocalId;
     return (
       <div style={styles.centerScreen}>
         <div style={styles.centerContent}>
           <PackageIcon style={{ width: 48, height: 48, color: "#fbbf24", margin: "0 auto" }} />
           <h2 style={{ margin: "16px 0 8px" }}>Pedido Inicializado</h2>
           <p style={{ color: "#94a3b8", padding: "0 20px" }}>
-            El viaje <strong>#{activePedidoId}</strong> correspondiente a <strong>"{nombreLocalActual}"</strong> está creado en el sistema, pero el hardware nodo (ESP32) no ha emitido ráfagas de datos DHT22 o coordenadas GPS todavía.
+            El viaje <strong>#{activePedidoId}</strong> de <strong>"{nombreLocalActual}"</strong> está registrado, pero el hardware nodo (ESP32) no ha emitido ráfagas de datos aún.
           </p>
           <button onClick={handleReset} style={{...styles.searchMainButton, marginTop: "24px"}}>Buscar otro Pedido</button>
         </div>
@@ -379,9 +371,9 @@ export default function Analytics() {
     );
   }
 
-  // VISTA 5: DASHBOARD DE RASTREO (Con lecturas en tiempo real)
+  // VISTA 5: DASHBOARD DE RASTREO
   const latestData = data[0];
-  const nombreLocalActivo = localesList.find(l => l.id === activeLocalId)?.nombre || activeLocalId;
+  const nombreLocalActivo = localesList.find(l => l.id === activeLocalId)?.nombre_local || activeLocalId;
 
   return (
     <div style={styles.container}>
@@ -404,15 +396,12 @@ export default function Analytics() {
         </div>
       </header>
 
-      {/* Contenedor Principal (Layout dividido) */}
+      {/* Contenedor Principal */}
       <main style={{ ...styles.main, ...(isDesktop ? styles.mainDesktop : {}) }}>
         
-        {/* Columna Izquierda: Tarjetas, Mapa e Historial */}
+        {/* Columna Izquierda */}
         <div style={styles.leftColumn}>
-          
-          {/* Fila de Tarjetas Estadísticas (Métricas DHT22 y Alertas) */}
           <div style={{ ...styles.statsGrid, gridTemplateColumns: isDesktop ? "repeat(4, 1fr)" : "repeat(2, 1fr)" }}>
-            
             {/* Temperatura */}
             <div style={styles.statCard}>
               <div style={styles.statLabel}>
@@ -444,7 +433,7 @@ export default function Analytics() {
               </p>
             </div>
             
-            {/* Estado de Alerta Cadena de Frío */}
+            {/* Alerta */}
             <div style={styles.statCard}>
               <div style={styles.statLabel}>
                 {latestData.alerta === "OK" ? (
@@ -460,7 +449,7 @@ export default function Analytics() {
             </div>
           </div>
 
-          {/* Sección de Geolocalización en Tiempo Real */}
+          {/* Mapa */}
           <div style={styles.card}>
             <div style={styles.cardHeader}>
               <MapPinIcon style={{ width: 18, height: 18, color: "#22d3ee", marginRight: 8 }} />
@@ -478,7 +467,7 @@ export default function Analytics() {
             </div>
           </div>
 
-          {/* Historial Detallado de Registros de Telemetría */}
+          {/* Historial */}
           <div style={styles.card}>
             <div style={styles.cardHeader}>Historial de Muestreos Sincronizados</div>
             <div style={styles.tableContainer}>
@@ -523,7 +512,7 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* Columna Derecha: Sistema de Soporte e Inteligencia Artificial */}
+        {/* Columna Derecha: Chat */}
         <div style={styles.chatContainer}>
           <div style={styles.cardHeader}>
             <BotIcon style={{ width: 18, height: 18, color: "#22d3ee", marginRight: 8 }} />
@@ -551,9 +540,6 @@ export default function Analytics() {
                 <SendIcon style={{ width: 18, height: 18 }} />
               </button>
             </div>
-            <p style={{ fontSize: 11, color: "#64748b", marginTop: 8, textAlign: "left" }}>
-              Palabras clave admitidas: estado, temperatura, humedad, gps o problemas.
-            </p>
           </div>
         </div>
 
@@ -562,7 +548,7 @@ export default function Analytics() {
   );
 }
 
-// 2. Estilos inline con paleta oscura adaptada al entorno Log-Cold
+// 2. Estilos CSS Inline Optimizados (Evita solapamientos visuales)
 const styles: { [key: string]: React.CSSProperties } = {
   centerScreen: {
     display: "flex", justifyContent: "center", alignItems: "center",
@@ -574,20 +560,31 @@ const styles: { [key: string]: React.CSSProperties } = {
     boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)", border: "1px solid #334155"
   },
   searchTitle: { fontSize: "24px", fontWeight: 700, color: "#f8fafc", marginBottom: "8px" },
+  formGroup: {
+    marginBottom: "20px",
+    textAlign: "left",
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px"
+  },
+  formLabel: {
+    color: "#94a3b8", fontSize: "12px", fontWeight: 500, display: "block"
+  },
   selectInput: {
     width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #475569",
     backgroundColor: "#0f172a", color: "#f8fafc", fontSize: "14px", outline: "none",
-    boxSizing: "border-box"
+    boxSizing: "border-box", display: "block", height: "46px"
   },
   searchInput: {
     width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #475569",
     backgroundColor: "#0f172a", color: "#f8fafc", fontSize: "14px", outline: "none",
-    boxSizing: "border-box"
+    boxSizing: "border-box", display: "block", height: "46px"
   },
   searchMainButton: {
     width: "100%", padding: "12px", borderRadius: "8px", border: "none",
     backgroundColor: "#06b6d4", color: "#0f172a", fontWeight: 600, fontSize: "15px",
-    display: "flex", justifyContent: "center", alignItems: "center", transition: "all 0.2s"
+    display: "flex", justifyContent: "center", alignItems: "center", transition: "all 0.2s",
+    marginTop: "10px", height: "46px"
   },
   container: {
     minHeight: "100vh", backgroundColor: "#0f172a", color: "#f8fafc",
