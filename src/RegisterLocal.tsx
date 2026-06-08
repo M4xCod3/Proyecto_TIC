@@ -11,47 +11,52 @@ export default function RegisterLocal() {
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    // 1. Verificación de contraseña antes de contactar a Supabase
-    if (formData.password !== formData.confirmPassword) {
-      alert("Las contraseñas no coinciden. Por favor, verifica.");
-      return;
-    }
+  // Aquí veremos en la consola qué datos tiene tu variable realmente
+  console.log("Datos contenidos en formData antes del envío:", formData);
 
-    setLoading(true);
-    const supabase = createClient(
-      import.meta.env.VITE_SUPABASE_URL, 
-      import.meta.env.VITE_SUPABASE_ANON_KEY
-    );
+  if (formData.password !== formData.confirmPassword) {
+    alert("Las contraseñas no coinciden.");
+    return;
+  }
 
-    const { data, error: authError } = await supabase.auth.signUp({
-      email: formData.email,
-      password: formData.password,
-    });
+  setLoading(true);
+  
+  // ... (tu lógica de supabase.auth.signUp sigue igual)
+  const { data, error: authError } = await supabase.auth.signUp({
+    email: formData.email,
+    password: formData.password,
+  });
 
-    if (authError) {
-      alert("Error: " + authError.message);
-      setLoading(false);
-      return;
-    }
-
-    const { error: dbError } = await supabase.from("locales").insert([{ 
-      nombre_local: formData.nombre_local, 
-      direccion: formData.direccion, 
-      dueno: formData.dueno,
-      user_id: data.user?.id 
-    }]);
-
-    if (dbError) {
-      alert("Error guardando datos: " + dbError.message);
-    } else {
-      alert("¡Registro exitoso!");
-      navigate("/");
-    }
+  if (authError) {
+    alert("Error en Auth: " + authError.message);
     setLoading(false);
-  };
+    return;
+  }
 
+  // AQUÍ ESTÁ EL PUNTO CRÍTICO. 
+  // Vamos a imprimir qué le estamos pasando a la tabla exactamente.
+  const datosParaInsertar = { 
+    nombre_local: formData.nombre_local, 
+    direccion: formData.direccion, 
+    dueno: formData.dueno,
+    user_id: data.user?.id 
+  };
+  
+  console.log("Objeto que se enviará a Supabase:", datosParaInsertar);
+
+  const { error: dbError } = await supabase.from("locales").insert([datosParaInsertar]);
+
+  if (dbError) {
+    console.error("Error detallado de Supabase:", dbError);
+    alert("Error DB: " + dbError.message);
+  } else {
+    alert("¡Registro exitoso!");
+    navigate("/");
+  }
+  setLoading(false);
+};
   return (
     <div style={{ padding: '50px', backgroundColor: '#0f172a', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
       <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '15px', width: '100%', maxWidth: '400px' }}>
