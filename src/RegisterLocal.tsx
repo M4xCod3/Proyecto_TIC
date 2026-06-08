@@ -3,60 +3,66 @@ import { createClient } from "@supabase/supabase-js";
 import { ArrowLeft } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
+// 1. Inicializamos Supabase fuera del componente
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
+
 export default function RegisterLocal() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ 
-    nombre_local: "", direccion: "", dueno: "", email: "", password: "", confirmPassword: "" 
+    nombre_local: "", 
+    direccion: "", 
+    dueno: "", 
+    email: "", 
+    password: "", 
+    confirmPassword: "" 
   });
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  // Aquí veremos en la consola qué datos tiene tu variable realmente
-  console.log("Datos contenidos en formData antes del envío:", formData);
+    if (formData.password !== formData.confirmPassword) {
+      alert("Las contraseñas no coinciden.");
+      return;
+    }
 
-  if (formData.password !== formData.confirmPassword) {
-    alert("Las contraseñas no coinciden.");
-    return;
-  }
+    setLoading(true);
 
-  setLoading(true);
-  
-  // ... (tu lógica de supabase.auth.signUp sigue igual)
-  const { data, error: authError } = await supabase.auth.signUp({
-    email: formData.email,
-    password: formData.password,
-  });
+    try {
+      // 2. Registro en Auth
+      const { data, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+      });
 
-  if (authError) {
-    alert("Error en Auth: " + authError.message);
-    setLoading(false);
-    return;
-  }
+      if (authError) throw authError;
 
-  // AQUÍ ESTÁ EL PUNTO CRÍTICO. 
-  // Vamos a imprimir qué le estamos pasando a la tabla exactamente.
-  const datosParaInsertar = { 
-    nombre_local: formData.nombre_local, 
-    direccion: formData.direccion, 
-    dueno: formData.dueno,
-    user_id: data.user?.id 
+      // 3. Inserción en la tabla locales
+      // Usamos el ID generado por Auth para relacionarlo
+      const { error: dbError } = await supabase.from("locales").insert([{ 
+        nombre_local: formData.nombre_local, 
+        direccion: formData.direccion, 
+        dueno: formData.dueno,
+        user_id: data.user?.id 
+      }]);
+
+      if (dbError) throw dbError;
+
+      alert("¡Registro exitoso!");
+      navigate("/");
+    } catch (error: any) {
+      console.error("Error en el proceso:", error);
+      alert("Error: " + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
-  
-  console.log("Objeto que se enviará a Supabase:", datosParaInsertar);
 
-  const { error: dbError } = await supabase.from("locales").insert([datosParaInsertar]);
+  const inputStyle = { padding: '10px', borderRadius: '5px', border: '1px solid #ccc', outline: 'none' };
 
-  if (dbError) {
-    console.error("Error detallado de Supabase:", dbError);
-    alert("Error DB: " + dbError.message);
-  } else {
-    alert("¡Registro exitoso!");
-    navigate("/");
-  }
-  setLoading(false);
-};
   return (
     <div style={{ padding: '50px', backgroundColor: '#0f172a', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
       <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '15px', width: '100%', maxWidth: '400px' }}>
@@ -65,14 +71,13 @@ export default function RegisterLocal() {
         <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <input required placeholder="Email" type="email" style={inputStyle} onChange={(e) => setFormData({...formData, email: e.target.value})} />
           <input required placeholder="Contraseña" type="password" style={inputStyle} onChange={(e) => setFormData({...formData, password: e.target.value})} />
-          {/* Campo de confirmación */}
           <input required placeholder="Confirmar contraseña" type="password" style={inputStyle} onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} />
           
           <hr style={{ margin: '10px 0' }} />
           
-          <input required placeholder="Nombre del Local" style={inputStyle} onChange={(e) => setFormData({...formData, nombre_local: e.target.value})} />
-          <input required placeholder="Dirección" style={inputStyle} onChange={(e) => setFormData({...formData, direccion: e.target.value})} />
-          <input required placeholder="Dueño" style={inputStyle} onChange={(e) => setFormData({...formData, dueno: e.target.value})} />
+          <input required placeholder="Nombre del Local" style={inputStyle} value={formData.nombre_local} onChange={(e) => setFormData({...formData, nombre_local: e.target.value})} />
+          <input required placeholder="Dirección" style={inputStyle} value={formData.direccion} onChange={(e) => setFormData({...formData, direccion: e.target.value})} />
+          <input required placeholder="Dueño" style={inputStyle} value={formData.dueno} onChange={(e) => setFormData({...formData, dueno: e.target.value})} />
           
           <button disabled={loading} type="submit" style={{ padding: '12px', backgroundColor: '#06b6d4', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
             {loading ? "Procesando..." : "Registrar Ahora"}
@@ -82,5 +87,3 @@ export default function RegisterLocal() {
     </div>
   );
 }
-
-const inputStyle = { padding: '10px', borderRadius: '5px', border: '1px solid #ccc', outline: 'none' };
