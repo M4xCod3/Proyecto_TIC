@@ -1,20 +1,26 @@
-import { useState, useEffect, useRef } from "react";
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import {
-  MapPinIcon,
-  ThermometerIcon,
-  DropletIcon,
-  AlertTriangleIcon,
-  CheckCircleIcon,
-  SendIcon,
-  BotIcon,
-  RefreshCwIcon,
-  ArrowLeftIcon,
-  SearchIcon,
-  PackageIcon,
+}import React, { useState, useEffect, useRef } from "react";
+// Importación de la instancia de Supabase (ajusta la ruta según tu proyecto)
+import { createClient } from "@supabase/supabase-browser"; 
+// Si ya tienes un cliente exportado en tu app, usa algo como: import { supabase } from "@/lib/supabase";
+const supabase = (window as any).supabase; // Placeholder por si lo manejas global, adáptalo a tu import real.
+
+import { 
+  Package as PackageIcon, 
+  Search as SearchIcon, 
+  RefreshCw as RefreshCwIcon, 
+  AlertTriangle as AlertTriangleIcon, 
+  ArrowLeft as ArrowLeftIcon, 
+  Thermometer as ThermometerIcon, 
+  Droplet as DropletIcon, 
+  MapPin as MapPinIcon, 
+  CheckCircle as CheckCircleIcon, 
+  Bot as BotIcon, 
+  Send as SendIcon 
 } from "lucide-react";
 
+// 1. Interfaces basadas exactamente en tu esquema de base de datos
 interface PedidoMonitoreo {
+  idx: number;
   id: number;
   created_at: string;
   latitud: number;
@@ -23,7 +29,13 @@ interface PedidoMonitoreo {
   humedad: number;
   alerta: string;
   hardware_id: string;
-  id_pedido?: string;
+  id_pedido: string; // Ej: "1001"
+  id_local: string;  // Ej: "3a5c8786-1b7c-46a1-a5cf-75f1862f918b"
+}
+
+interface LocalItem {
+  id: string;     // UUID del local
+  nombre: string; // Nombre legible (ej: 'Sucursal Norte')
 }
 
 interface ChatMessage {
@@ -31,390 +43,117 @@ interface ChatMessage {
   content: string;
 }
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
-
-let supabase: SupabaseClient | null = null;
-if (SUPABASE_URL && SUPABASE_ANON_KEY) {
-  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-}
-
-const styles = {
-  container: {
-    minHeight: "100vh",
-    backgroundColor: "#0f172a",
-    color: "#ffffff",
-    fontFamily: "'Segoe UI', sans-serif",
-  } as React.CSSProperties,
-
-  header: {
-    backgroundColor: "#1e293b",
-    borderBottom: "1px solid #334155",
-    padding: "12px 16px",
-  } as React.CSSProperties,
-
-  headerContent: {
-    maxWidth: "1200px",
-    margin: "0 auto",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-  } as React.CSSProperties,
-
-  headerLeft: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-  } as React.CSSProperties,
-
-  backButton: {
-    padding: "8px",
-    backgroundColor: "transparent",
-    border: "none",
-    color: "#ffffff",
-    cursor: "pointer",
-    borderRadius: "8px",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  } as React.CSSProperties,
-
-  title: {
-    fontSize: "20px",
-    fontWeight: "bold",
-    color: "#22d3ee",
-    margin: 0,
-  } as React.CSSProperties,
-
-  subtitle: {
-    fontSize: "14px",
-    color: "#94a3b8",
-    margin: 0,
-  } as React.CSSProperties,
-
-  statusBadge: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    padding: "4px 12px",
-    borderRadius: "20px",
-    border: "1px solid #334155",
-  } as React.CSSProperties,
-
-  statusDot: {
-    width: "8px",
-    height: "8px",
-    borderRadius: "50%",
-  } as React.CSSProperties,
-
-  main: {
-    maxWidth: "1200px",
-    margin: "0 auto",
-    padding: "16px",
-    display: "grid",
-    gridTemplateColumns: "1fr",
-    gap: "16px",
-  } as React.CSSProperties,
-
-  mainDesktop: {
-    gridTemplateColumns: "2fr 1fr",
-  } as React.CSSProperties,
-
-  leftColumn: {
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: "16px",
-  } as React.CSSProperties,
-
-  statsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(2, 1fr)",
-    gap: "12px",
-  } as React.CSSProperties,
-
-  statCard: {
-    backgroundColor: "#1e293b",
-    borderRadius: "8px",
-    padding: "16px",
-    border: "1px solid #334155",
-  } as React.CSSProperties,
-
-  statLabel: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    color: "#94a3b8",
-    fontSize: "12px",
-    marginBottom: "4px",
-  } as React.CSSProperties,
-
-  statValue: {
-    fontSize: "24px",
-    fontWeight: "bold",
-    margin: 0,
-  } as React.CSSProperties,
-
-  card: {
-    backgroundColor: "#1e293b",
-    borderRadius: "8px",
-    border: "1px solid #334155",
-    overflow: "hidden",
-  } as React.CSSProperties,
-
-  cardHeader: {
-    padding: "12px",
-    borderBottom: "1px solid #334155",
-    fontWeight: 600,
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    backgroundColor: "#1e293b",
-  } as React.CSSProperties,
-
-  mapContainer: {
-    height: "350px",
-    width: "100%",
-    backgroundColor: "#334155",
-  } as React.CSSProperties,
-
-  tableContainer: {
-    overflowX: "auto" as const,
-    maxHeight: "300px",
-    overflowY: "auto" as const,
-  } as React.CSSProperties,
-
-  table: {
-    width: "100%",
-    fontSize: "14px",
-    borderCollapse: "collapse" as const,
-  } as React.CSSProperties,
-
-  th: {
-    backgroundColor: "#334155",
-    padding: "8px 12px",
-    textAlign: "left" as const,
-    position: "sticky" as const,
-    top: 0,
-    zIndex: 10,
-  } as React.CSSProperties,
-
-  td: {
-    padding: "8px 12px",
-    borderTop: "1px solid #334155",
-  } as React.CSSProperties,
-
-  chatContainer: {
-    backgroundColor: "#1e293b",
-    borderRadius: "8px",
-    border: "1px solid #334155",
-    display: "flex",
-    flexDirection: "column" as const,
-    height: "600px",
-  } as React.CSSProperties,
-
-  chatMessages: {
-    flex: 1,
-    overflowY: "auto" as const,
-    padding: "12px",
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: "12px",
-  } as React.CSSProperties,
-
-  chatInputContainer: {
-    padding: "12px",
-    borderTop: "1px solid #334155",
-  } as React.CSSProperties,
-
-  chatInputRow: {
-    display: "flex",
-    gap: "8px",
-  } as React.CSSProperties,
-
-  chatInput: {
-    flex: 1,
-    backgroundColor: "#334155",
-    border: "1px solid #475569",
-    borderRadius: "8px",
-    padding: "8px 12px",
-    color: "#ffffff",
-    fontSize: "14px",
-    outline: "none",
-  } as React.CSSProperties,
-
-  chatButton: {
-    padding: "8px 12px",
-    backgroundColor: "#0891b2",
-    border: "none",
-    borderRadius: "8px",
-    color: "#ffffff",
-    cursor: "pointer",
-  } as React.CSSProperties,
-
-  userMessage: {
-    alignSelf: "flex-end",
-    backgroundColor: "#0891b2",
-    color: "#ffffff",
-    borderRadius: "8px",
-    padding: "8px 12px",
-    maxWidth: "85%",
-    fontSize: "14px",
-  } as React.CSSProperties,
-
-  assistantMessage: {
-    alignSelf: "flex-start",
-    backgroundColor: "#334155",
-    color: "#e2e8f0",
-    borderRadius: "8px",
-    padding: "8px 12px",
-    maxWidth: "85%",
-    fontSize: "14px",
-    whiteSpace: "pre-wrap" as const,
-  } as React.CSSProperties,
-
-  centerScreen: {
-    minHeight: "100vh",
-    backgroundColor: "#0f172a",
-    color: "#ffffff",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontFamily: "'Segoe UI', sans-serif",
-  } as React.CSSProperties,
-
-  centerContent: {
-    textAlign: "center" as const,
-    padding: "32px",
-    maxWidth: "450px",
-    width: "100%",
-  } as React.CSSProperties,
-
-  searchBox: {
-    backgroundColor: "#1e293b",
-    padding: "32px",
-    borderRadius: "12px",
-    border: "1px solid #334155",
-    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5)",
-  } as React.CSSProperties,
-
-  searchTitle: {
-    fontSize: "24px",
-    fontWeight: "bold",
-    marginBottom: "8px",
-    color: "#ffffff",
-  } as React.CSSProperties,
-
-  searchInput: {
-    width: "100%",
-    backgroundColor: "#0f172a",
-    border: "1px solid #475569",
-    borderRadius: "8px",
-    padding: "12px 16px",
-    color: "#ffffff",
-    fontSize: "16px",
-    marginTop: "24px",
-    marginBottom: "16px",
-    outline: "none",
-    boxSizing: "border-box" as const,
-  } as React.CSSProperties,
-
-  searchMainButton: {
-    width: "100%",
-    padding: "12px",
-    backgroundColor: "#0891b2",
-    border: "none",
-    borderRadius: "8px",
-    color: "#ffffff",
-    fontSize: "16px",
-    fontWeight: "bold",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "8px",
-    transition: "background-color 0.2s",
-  } as React.CSSProperties,
-  
-  badge: {
-    padding: "2px 8px",
-    borderRadius: "4px",
-    fontSize: "12px",
-  } as React.CSSProperties,
-};
-
 export default function Analytics() {
+  // Estados de control de Filtros de Búsqueda
   const [activePedidoId, setActivePedidoId] = useState<string>("");
-  const [searchInput, setSearchInput] = useState<string>("");
-  
+  const [activeLocalId, setActiveLocalId] = useState<string>(""); 
+  const [searchInput, setSearchInput] = useState<string>(""); // Guarda el texto del id_pedido
+  const [localInput, setLocalInput] = useState<string>("");     // Guarda el UUID del local seleccionado
+
+  // Estado para la lista de locales del desplegable
+  const [localesList, setLocalesList] = useState<LocalItem[]>([]);
+
+  // Estados del Dashboard de Datos
   const [data, setData] = useState<PedidoMonitoreo[]>([]);
   const [pedidoEstado, setPedidoEstado] = useState<string>("En tránsito");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  // Estados del Asistente Virtual
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
 
+  // Manejador del tamaño de pantalla para diseño responsivo
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-// Efecto principal: Consulta DIRECTAMENTE a pedidos_monitoreo
+  // EFECTO 1: Carga inicial de locales para poblar el menú desplegable (Select)
   useEffect(() => {
-    if (!activePedidoId) return;
+    const cargarLocales = async () => {
+      if (!supabase) return;
+      try {
+        const { data: locales, error: localesError } = await supabase
+          .from("locales")
+          .select("id, nombre")
+          .order("nombre", { ascending: true });
+
+        if (!localesError && locales) {
+          setLocalesList(locales);
+        }
+      } catch (err) {
+        console.error("Error al obtener los locales:", err);
+      }
+    };
+
+    cargarLocales();
+  }, []);
+
+  // EFECTO 2: Consulta de Telemetría por Filtro Compuesto (id_pedido AND id_local) + Realtime
+  useEffect(() => {
+    if (!activePedidoId || !activeLocalId) return;
 
     const fetchData = async () => {
       setLoading(true);
       setError(null);
       
       if (!supabase) {
-        setError("Supabase no configurado");
+        setError("Supabase no configurado en el proyecto.");
         setLoading(false);
         return;
       }
 
       try {
-        // Consultamos la telemetría directamente usando el código ingresado en 'id_pedido'
+        // Consulta inicial con el doble filtro estricto
         const { data: pedidos, error: queryError } = await supabase
           .from("pedidos_monitoreo")
           .select("*")
           .eq("id_pedido", activePedidoId)
+          .eq("id_local", activeLocalId) 
           .order("created_at", { ascending: false })
           .limit(500);
 
         if (queryError) {
-          setError("Error: " + queryError.message);
+          setError("Error en la consulta: " + queryError.message);
           setLoading(false);
           return;
         }
 
-        // Seteamos los datos directamente
         setData(pedidos || []);
         
-        // Mensaje de bienvenida del chat personalizado
+        // Buscar el nombre del local para personalizar el mensaje de la IA
+        const nombreLocal = localesList.find(l => l.id === activeLocalId)?.nombre || "Local seleccionado";
+
         setChatMessages([
-          { role: "assistant", content: `¡Hola! Soy el asistente de Log-Cold. Estoy monitoreando el pedido #${activePedidoId}. ¿Qué necesitas saber?` }
+          { 
+            role: "assistant", 
+            content: `¡Hola! Soy el asistente analítico de Log-Cold. Estoy monitoreando el pedido #${activePedidoId} proveniente de la sucursal: "${nombreLocal}". ¿Qué métrica deseas evaluar?` 
+          }
         ]);
         
         setLoading(false);
 
-        // Suscripción en tiempo real directa a la telemetría en 'pedidos_monitoreo'
+        // Suscripción Realtime a Postgres aplicando el filtro por código de pedido
         const telemetriaChannel = supabase
-          .channel(`pedido_realtime_${activePedidoId}`)
+          .channel(`pedido_realtime_${activeLocalId}_${activePedidoId}`)
           .on(
             "postgres_changes",
             { 
               event: "INSERT", 
               schema: "public", 
               table: "pedidos_monitoreo",
-              filter: `id_pedido=eq.${activePedidoId}` // Escucha cambios directos de este código de pedido
+              filter: `id_pedido=eq.${activePedidoId}`
             },
             (payload) => {
               const newRecord = payload.new as PedidoMonitoreo;
-              setData(prev => [newRecord, ...prev].slice(0, 500));
+              // Filtro en el cliente para asegurar que el insert pertenece al mismo id_local
+              if (newRecord.id_local === activeLocalId) {
+                setData(prev => [newRecord, ...prev].slice(0, 500));
+              }
             }
           )
           .subscribe();
@@ -423,46 +162,56 @@ export default function Analytics() {
           telemetriaChannel.unsubscribe();
         };
       } catch (err) {
-        setError("Error: " + (err instanceof Error ? err.message : "Desconocido"));
+        setError("Error inesperado: " + (err instanceof Error ? err.message : "Desconocido"));
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [activePedidoId]);
+  }, [activePedidoId, activeLocalId, localesList]);
 
+  // Auto-scroll del chat de soporte
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
+  // Procesar envío del formulario de rastreo
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchInput.trim()) {
+    if (searchInput.trim() && localInput) {
       setActivePedidoId(searchInput.trim());
+      setActiveLocalId(localInput);
     }
   };
 
+  // Limpiar estados y regresar a la pantalla de búsqueda
   const handleReset = () => {
     setActivePedidoId("");
+    setActiveLocalId("");
     setSearchInput("");
+    setLocalInput("");
     setData([]);
     setPedidoEstado("En tránsito");
     setChatMessages([]);
   };
 
+  // Función de análisis de telemetría en tiempo real
   const analyzeData = () => {
     if (data.length === 0) return null;
     const latest = data[0];
     const avgTemp = data.reduce((sum, d) => sum + d.temperatura, 0) / data.length;
     const avgHum = data.reduce((sum, d) => sum + d.humedad, 0) / data.length;
     const alertCount = data.filter(d => d.alerta !== "OK").length;
-    let status = pedidoEstado.toUpperCase(); // Usa el estado oficial de la BD
+    
+    let status = pedidoEstado.toUpperCase(); 
     if (latest.temperatura < 2 || latest.temperatura > 8) status = "ALERTA TEMPERATURA";
     if (latest.humedad < 60 || latest.humedad > 95) status = "ALERTA HUMEDAD";
     if (latest.alerta !== "OK") status = "ALERTA ACTIVA";
+    
     return { status, latest, avgTemp, avgHum, alertCount, total: data.length };
   };
 
+  // Procesamiento de mensajes en el chat de IA
   const handleSendMessage = () => {
     if (!chatInput.trim()) return;
     const userMessage = chatInput.trim();
@@ -475,20 +224,22 @@ export default function Analytics() {
       const analysis = analyzeData();
 
       if (!analysis) {
-        response = "No hay datos disponibles para este pedido aún.";
+        response = "No hay lecturas de sensores disponibles para procesar la consulta.";
       } else {
         if (lowerMsg.includes("estado") || lowerMsg.includes("como")) {
-          response = `Estado actual del envío: ${pedidoEstado}\nAlertas del sensor: ${analysis.status}\nTemp: ${analysis.latest.temperatura.toFixed(1)}°C\nHumedad: ${analysis.latest.humedad.toFixed(1)}%\nUbicación: ${analysis.latest.latitud.toFixed(4)}, ${analysis.latest.longitud.toFixed(4)}`;
+          response = `Estado general: ${pedidoEstado}\nAlertas del sensor: ${analysis.status}\nTemp actual: ${analysis.latest.temperatura.toFixed(1)}°C\nHumedad: ${analysis.latest.humedad.toFixed(1)}%\nCoordenadas: ${analysis.latest.latitud.toFixed(4)}, ${analysis.latest.longitud.toFixed(4)}`;
         } else if (lowerMsg.includes("temp")) {
-          response = `Temperatura actual: ${analysis.latest.temperatura.toFixed(1)}°C\nPromedio del viaje: ${analysis.avgTemp.toFixed(1)}°C\nRango óptimo: 2-8°C`;
+          response = `Temperatura actual: ${analysis.latest.temperatura.toFixed(1)}°C\nPromedio del trayecto: ${analysis.avgTemp.toFixed(1)}°C\nRango de seguridad: 2°C a 8°C`;
         } else if (lowerMsg.includes("hum")) {
-          response = `Humedad actual: ${analysis.latest.humedad.toFixed(1)}%\nPromedio del viaje: ${analysis.avgHum.toFixed(1)}%\nRango óptimo: 60-95%`;
+          response = `Humedad de la carga: ${analysis.latest.humedad.toFixed(1)}%\nPromedio histórico: ${analysis.avgHum.toFixed(1)}%\nRango óptimo: 60% a 95%`;
         } else if (lowerMsg.includes("ubic") || lowerMsg.includes("gps") || lowerMsg.includes("donde")) {
-          response = `Ubicación GPS actual:\nLat: ${analysis.latest.latitud.toFixed(6)}\nLon: ${analysis.latest.longitud.toFixed(6)}`;
+          response = `Coordenadas GPS del ESP32:\nLatitud: ${analysis.latest.latitud.toFixed(6)}\nLongitud: ${analysis.latest.longitud.toFixed(6)}`;
         } else if (lowerMsg.includes("alerta") || lowerMsg.includes("problema")) {
-          response = analysis.alertCount > 0 ? `Se han registrado ${analysis.alertCount} alertas térmicas en este trayecto.` : "El trayecto se ha mantenido sin alertas críticas, todo OK.";
+          response = analysis.alertCount > 0 
+            ? `Atención: Se han registrado ${analysis.alertCount} anomalías térmicas/humedad en este envío.` 
+            : "La cadena de frío está perfectamente integrada. Sin alertas registradas.";
         } else {
-          response = "Puedo informarte sobre: el estado general del envío, temperatura de los sensores, humedad, ubicación GPS o alertas históricas del pedido.";
+          response = "Puedo ayudarte con reportes específicos de: estado de la carga, temperatura de los sensores DHT22, porcentaje de humedad, coordenadas GPS o análisis de alertas.";
         }
       }
       setChatMessages(prev => [...prev, { role: "assistant", content: response }]);
@@ -496,10 +247,11 @@ export default function Analytics() {
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    return new Date(dateStr).toLocaleString("es-CL", { 
+      day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" 
+    });
   };
 
-  // MODIFICACIÓN: Helper para pintar el Badge según el estado real de la BD
   const getStatusColor = () => {
     switch (pedidoEstado.toLowerCase()) {
       case "en tránsito":
@@ -517,39 +269,65 @@ export default function Analytics() {
 
   const currentStatusStyle = getStatusColor();
 
-  // 1. PANTALLA DE INGRESO (Login del Tracking)
-  if (!activePedidoId) {
+  // VISTA 1: INTERFAZ DE LOG-IN / BÚSQUEDA (Con Select por nombre de local y código de pedido)
+  if (!activePedidoId || !activeLocalId) {
     return (
       <div style={styles.centerScreen}>
         <div style={styles.centerContent}>
           <div style={styles.searchBox}>
             <PackageIcon style={{ width: 48, height: 48, color: "#22d3ee", margin: "0 auto 16px" }} />
             <h2 style={styles.searchTitle}>Tracking Log-Cold</h2>
-            <p style={{ color: "#94a3b8", fontSize: "14px", margin: 0 }}>
-              Ingresa el código de tu pedido para monitorear la cadena de frío en tiempo real.
+            <p style={{ color: "#94a3b8", fontSize: "14px", marginBottom: "24px" }}>
+              Monitoreo telemático de la cadena de frío en tiempo real.
             </p>
             
             <form onSubmit={handleSearchSubmit}>
-              <input
-                type="text"
-                placeholder="Ej: 1001" // Pon aquí el formato real del código de pedido que estés usando en tu telemetría
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                style={styles.searchInput}
-                autoFocus
-              />
+              {/* Desplegable Dinámico de Locales */}
+              <div style={{ marginBottom: "18px", textAlign: "left" }}>
+                <label style={{ color: "#94a3b8", fontSize: "12px", display: "block", marginBottom: "6px", fontWeight: 500 }}>
+                  Establecimiento / Local Comercial
+                </label>
+                <select
+                  value={localInput}
+                  onChange={(e) => setLocalInput(e.target.value)}
+                  style={styles.selectInput}
+                  required
+                >
+                  <option value="" disabled>-- Selecciona un Local --</option>
+                  {localesList.map((local) => (
+                    <option key={local.id} value={local.id}>
+                      {local.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Input de Código de Pedido */}
+              <div style={{ marginBottom: "24px", textAlign: "left" }}>
+                <label style={{ color: "#94a3b8", fontSize: "12px", display: "block", marginBottom: "6px", fontWeight: 500 }}>
+                  Código Identificador del Pedido
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: 1001"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  style={styles.searchInput}
+                  required
+                />
+              </div>
 
               <button 
                 type="submit" 
                 style={{
                   ...styles.searchMainButton,
-                  opacity: searchInput.trim() ? 1 : 0.5,
-                  cursor: searchInput.trim() ? "pointer" : "not-allowed"
+                  opacity: (searchInput.trim() && localInput) ? 1 : 0.5,
+                  cursor: (searchInput.trim() && localInput) ? "pointer" : "not-allowed"
                 }}
-                disabled={!searchInput.trim()}
+                disabled={!searchInput.trim() || !localInput}
               >
-                <SearchIcon style={{ width: 20, height: 20 }} />
-                Rastrear Pedido
+                <SearchIcon style={{ width: 18, height: 18, marginRight: 8 }} />
+                Rastrear Envío
               </button>
             </form>
           </div>
@@ -558,50 +336,57 @@ export default function Analytics() {
     );
   }
 
-  // PANTALLAS DE CARGA Y ERROR PARA EL DASHBOARD
+  // VISTA 2: PANTALLA DE CARGA
   if (loading) {
     return (
       <div style={styles.centerScreen}>
         <div style={styles.centerContent}>
           <RefreshCwIcon style={{ width: 48, height: 48, color: "#22d3ee", animation: "spin 1s linear infinite", margin: "0 auto" }} />
-          <p style={{ color: "#94a3b8", marginTop: 16 }}>Sincronizando telemetría del pedido #{activePedidoId}...</p>
+          <p style={{ color: "#94a3b8", marginTop: 16 }}>Sincronizando flujo de telemetría para pedido #{activePedidoId}...</p>
         </div>
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
+  // VISTA 3: PANTALLA DE ERROR DE CONEXIÓN
   if (error) {
     return (
       <div style={styles.centerScreen}>
         <div style={styles.centerContent}>
           <AlertTriangleIcon style={{ width: 48, height: 48, color: "#f87171", margin: "0 auto" }} />
-          <h2 style={{ margin: "16px 0 8px" }}>Error de Conexión</h2>
+          <h2 style={{ margin: "16px 0 8px", color: "#f87171" }}>Fallo de Sincronización</h2>
           <p style={{ color: "#94a3b8" }}>{error}</p>
-          <button onClick={handleReset} style={{...styles.searchMainButton, marginTop: "24px"}}>Volver al inicio</button>
+          <button onClick={handleReset} style={{...styles.searchMainButton, marginTop: "24px"}}>Regresar al Inicio</button>
         </div>
       </div>
     );
   }
 
+  // VISTA 4: PANTALLA DE ESPERA DE DATOS (Vacío)
   if (data.length === 0) {
+    const nombreLocalActual = localesList.find(l => l.id === activeLocalId)?.nombre || activeLocalId;
     return (
       <div style={styles.centerScreen}>
         <div style={styles.centerContent}>
           <PackageIcon style={{ width: 48, height: 48, color: "#fbbf24", margin: "0 auto" }} />
           <h2 style={{ margin: "16px 0 8px" }}>Pedido Inicializado</h2>
-          <p style={{ color: "#94a3b8" }}>El viaje <strong>#{activePedidoId}</strong> está registrado en el sistema con estado <strong>"{pedidoEstado}"</strong>, pero el ESP32 asignado aún no envía su primera lectura de sensores.</p>
-          <button onClick={handleReset} style={{...styles.searchMainButton, marginTop: "24px"}}>Buscar otro pedido</button>
+          <p style={{ color: "#94a3b8", padding: "0 20px" }}>
+            El viaje <strong>#{activePedidoId}</strong> correspondiente a <strong>"{nombreLocalActual}"</strong> está creado en el sistema, pero el hardware nodo (ESP32) no ha emitido ráfagas de datos DHT22 o coordenadas GPS todavía.
+          </p>
+          <button onClick={handleReset} style={{...styles.searchMainButton, marginTop: "24px"}}>Buscar otro Pedido</button>
         </div>
       </div>
     );
   }
 
-  // 2. DASHBOARD PRINCIPAL (Con datos)
+  // VISTA 5: DASHBOARD DE RASTREO (Con lecturas en tiempo real)
   const latestData = data[0];
+  const nombreLocalActivo = localesList.find(l => l.id === activeLocalId)?.nombre || activeLocalId;
 
   return (
     <div style={styles.container}>
+      {/* Encabezado del Dashboard */}
       <header style={styles.header}>
         <div style={styles.headerContent}>
           <div style={styles.headerLeft}>
@@ -610,10 +395,9 @@ export default function Analytics() {
             </button>
             <div>
               <h1 style={styles.title}>Pedido #{activePedidoId}</h1>
-              <p style={styles.subtitle}>Log-Cold Tracking System</p>
+              <p style={styles.subtitle}>Log-Cold Tracking System — Sucursal: {nombreLocalActivo}</p>
             </div>
           </div>
-          {/* MODIFICACIÓN: El Badge ahora cambia de color y texto dinámicamente con la BD */}
           <div style={{ ...styles.statusBadge, backgroundColor: currentStatusStyle.bg, borderColor: currentStatusStyle.text }}>
             <span style={{ ...styles.statusDot, backgroundColor: currentStatusStyle.dot, boxShadow: `0 0 8px ${currentStatusStyle.dot}` }} />
             <span style={{ fontSize: 14, color: currentStatusStyle.text, fontWeight: 600 }}>{pedidoEstado}</span>
@@ -621,11 +405,16 @@ export default function Analytics() {
         </div>
       </header>
 
+      {/* Contenedor Principal (Layout dividido) */}
       <main style={{ ...styles.main, ...(isDesktop ? styles.mainDesktop : {}) }}>
+        
+        {/* Columna Izquierda: Tarjetas, Mapa e Historial */}
         <div style={styles.leftColumn}>
           
-          {/* Stats Principales */}
+          {/* Fila de Tarjetas Estadísticas (Métricas DHT22 y Alertas) */}
           <div style={{ ...styles.statsGrid, gridTemplateColumns: isDesktop ? "repeat(4, 1fr)" : "repeat(2, 1fr)" }}>
+            
+            {/* Temperatura */}
             <div style={styles.statCard}>
               <div style={styles.statLabel}>
                 <ThermometerIcon style={{ width: 16, height: 16 }} />
@@ -635,6 +424,8 @@ export default function Analytics() {
                 {latestData.temperatura.toFixed(1)}°C
               </p>
             </div>
+            
+            {/* Humedad */}
             <div style={styles.statCard}>
               <div style={styles.statLabel}>
                 <DropletIcon style={{ width: 16, height: 16 }} />
@@ -642,15 +433,19 @@ export default function Analytics() {
               </div>
               <p style={{ ...styles.statValue, color: "#60a5fa" }}>{latestData.humedad.toFixed(1)}%</p>
             </div>
+            
+            {/* Ubicación GPS */}
             <div style={styles.statCard}>
               <div style={styles.statLabel}>
                 <MapPinIcon style={{ width: 16, height: 16 }} />
                 <span>Ubicación GPS</span>
               </div>
-              <p style={{ fontSize: 12, fontFamily: "monospace", color: "#e2e8f0", marginTop: "4px" }}>
-                {latestData.latitud.toFixed(4)}<br />{latestData.longitud.toFixed(4)}
+              <p style={{ fontSize: 12, fontFamily: "monospace", color: "#e2e8f0", marginTop: "6px", lineHeight: "1.4" }}>
+                Lat: {latestData.latitud.toFixed(4)}<br />Lon: {latestData.longitud.toFixed(4)}
               </p>
             </div>
+            
+            {/* Estado de Alerta Cadena de Frío */}
             <div style={styles.statCard}>
               <div style={styles.statLabel}>
                 {latestData.alerta === "OK" ? (
@@ -666,16 +461,16 @@ export default function Analytics() {
             </div>
           </div>
 
-          {/* Mapa Corregido */}
+          {/* Sección de Geolocalización en Tiempo Real */}
           <div style={styles.card}>
             <div style={styles.cardHeader}>
-              <MapPinIcon style={{ width: 18, height: 18, color: "#22d3ee" }} />
-              Ubicación en Tiempo Real
+              <MapPinIcon style={{ width: 18, height: 18, color: "#22d3ee", marginRight: 8 }} />
+              Posición Telemétrica Actual
             </div>
             <div style={styles.mapContainer}>
               <iframe
                 key={`${latestData.latitud}-${latestData.longitud}`}
-                title="Mapa de Tracking"
+                title="Mapa OpenStreetMap"
                 width="100%"
                 height="100%"
                 style={{ border: 0 }}
@@ -684,18 +479,18 @@ export default function Analytics() {
             </div>
           </div>
 
-          {/* Historial (Tabla) */}
+          {/* Historial Detallado de Registros de Telemetría */}
           <div style={styles.card}>
-            <div style={styles.cardHeader}>Historial de Telemetría</div>
+            <div style={styles.cardHeader}>Historial de Muestreos Sincronizados</div>
             <div style={styles.tableContainer}>
               <table style={styles.table}>
                 <thead>
                   <tr>
-                    <th style={styles.th}>Hora Local</th>
-                    <th style={styles.th}>Temp</th>
+                    <th style={styles.th}>Hora Local (CL)</th>
+                    <th style={styles.th}>Temperatura</th>
                     <th style={styles.th}>Humedad</th>
-                    <th style={styles.th}>Sensor ID</th>
-                    <th style={styles.th}>Estado</th>
+                    <th style={styles.th}>Hardware ID</th>
+                    <th style={styles.th}>Alerta</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -729,11 +524,11 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* Chat de Asistencia */}
+        {/* Columna Derecha: Sistema de Soporte e Inteligencia Artificial */}
         <div style={styles.chatContainer}>
           <div style={styles.cardHeader}>
-            <BotIcon style={{ width: 20, height: 20, color: "#22d3ee" }} />
-            Soporte IA del Pedido
+            <BotIcon style={{ width: 18, height: 18, color: "#22d3ee", marginRight: 8 }} />
+            Asistente Inteligente de Ruta
           </div>
           <div style={styles.chatMessages}>
             {chatMessages.map((msg, i) => (
@@ -750,19 +545,122 @@ export default function Analytics() {
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-                placeholder="Consulta el estado térmico..."
+                placeholder="Pregunta por la temperatura o alertas..."
                 style={styles.chatInput}
               />
               <button onClick={handleSendMessage} style={styles.chatButton}>
-                <SendIcon style={{ width: 20, height: 20 }} />
+                <SendIcon style={{ width: 18, height: 18 }} />
               </button>
             </div>
-            <p style={{ fontSize: 12, color: "#64748b", marginTop: 8 }}>
-              Pregunta por: estado, temperatura, alertas o ubicación.
+            <p style={{ fontSize: 11, color: "#64748b", marginTop: 8, textAlign: "left" }}>
+              Palabras clave admitidas: estado, temperatura, humedad, gps o problemas.
             </p>
           </div>
         </div>
+
       </main>
     </div>
   );
 }
+
+// 2. Estilos inline con paleta oscura adaptada al entorno Log-Cold
+const styles: { [key: string]: React.CSSProperties } = {
+  centerScreen: {
+    display: "flex", justifyContent: "center", alignItems: "center",
+    minHeight: "100vh", backgroundColor: "#0f172a", color: "#f8fafc", padding: "20px"
+  },
+  centerContent: { width: "100%", maxWidth: "420px", textAlign: "center" },
+  searchBox: {
+    backgroundColor: "#1e293b", padding: "32px", borderRadius: "16px",
+    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)", border: "1px solid #334155"
+  },
+  searchTitle: { fontSize: "24px", fontWeight: 700, color: "#f8fafc", marginBottom: "8px" },
+  selectInput: {
+    width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #475569",
+    backgroundColor: "#0f172a", color: "#f8fafc", fontSize: "14px", outline: "none",
+    boxSizing: "border-box"
+  },
+  searchInput: {
+    width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #475569",
+    backgroundColor: "#0f172a", color: "#f8fafc", fontSize: "14px", outline: "none",
+    boxSizing: "border-box"
+  },
+  searchMainButton: {
+    width: "100%", padding: "12px", borderRadius: "8px", border: "none",
+    backgroundColor: "#06b6d4", color: "#0f172a", fontWeight: 600, fontSize: "15px",
+    display: "flex", justifyContent: "center", alignItems: "center", transition: "all 0.2s"
+  },
+  container: {
+    minHeight: "100vh", backgroundColor: "#0f172a", color: "#f8fafc",
+    display: "flex", flexDirection: "column", fontFamily: "sans-serif"
+  },
+  header: {
+    backgroundColor: "#1e293b", borderBottom: "1px solid #334155", padding: "16px 24px"
+  },
+  headerContent: {
+    display: "flex", justifyContent: "space-between", alignItems: "center",
+    maxWidth: "1400px", margin: "0 auto", width: "100%"
+  },
+  headerLeft: { display: "flex", alignItems: "center", gap: "16px" },
+  backButton: {
+    backgroundColor: "transparent", border: "1px solid #475569", color: "#94a3b8",
+    padding: "8px", borderRadius: "8px", cursor: "pointer", display: "flex", alignItems: "center"
+  },
+  title: { fontSize: "20px", fontWeight: 700, margin: 0 },
+  subtitle: { fontSize: "13px", color: "#94a3b8", margin: "2px 0 0 0" },
+  statusBadge: {
+    display: "flex", alignItems: "center", gap: "8px", padding: "6px 14px",
+    borderRadius: "20px", border: "1px solid"
+  },
+  statusDot: { width: "8px", height: "8px", borderRadius: "50%" },
+  main: {
+    padding: "20px", maxWidth: "1400px", margin: "0 auto", width: "100%",
+    boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "20px"
+  },
+  mainDesktop: { flexDirection: "row", alignItems: "flex-start" },
+  leftColumn: { flex: 2, display: "flex", flexDirection: "column", gap: "20px", minWidth: 0 },
+  statsGrid: { display: "grid", gap: "12px", width: "100%" },
+  statCard: {
+    backgroundColor: "#1e293b", padding: "16px", borderRadius: "12px",
+    border: "1px solid #334155", display: "flex", flexDirection: "column", justifyContent: "center"
+  },
+  statLabel: { display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#94a3b8" },
+  statValue: { fontSize: "22px", fontWeight: 700, margin: "8px 0 0 0" },
+  card: {
+    backgroundColor: "#1e293b", borderRadius: "12px", border: "1px solid #334155",
+    overflow: "hidden", display: "flex", flexDirection: "column"
+  },
+  cardHeader: {
+    padding: "14px 18px", borderBottom: "1px solid #334155", fontWeight: 600,
+    fontSize: "14px", color: "#e2e8f0", display: "flex", alignItems: "center"
+  },
+  mapContainer: { height: "320px", width: "100%", backgroundColor: "#0f172a" },
+  tableContainer: { overflowX: "auto", width: "100%" },
+  table: { width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "13px" },
+  th: { padding: "12px 18px", borderBottom: "1px solid #334155", color: "#94a3b8", fontWeight: 500 },
+  td: { padding: "12px 18px", borderBottom: "1px solid #334155", color: "#e2e8f0" },
+  badge: { padding: "4px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 600 },
+  chatContainer: {
+    flex: 1, backgroundColor: "#1e293b", borderRadius: "12px", border: "1px solid #334155",
+    display: "flex", flexDirection: "column", height: "550px", position: "sticky", top: "20px"
+  },
+  chatMessages: { flex: 1, padding: "16px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "12px" },
+  userMessage: {
+    alignSelf: "flex-end", backgroundColor: "#06b6d4", color: "#0f172a",
+    padding: "10px 14px", borderRadius: "12px 12px 0 12px", maxWidth: "80%", fontSize: "13px", fontWeight: 500
+  },
+  assistantMessage: {
+    alignSelf: "flex-start", backgroundColor: "#334155", color: "#f8fafc",
+    padding: "10px 14px", borderRadius: "12px 12px 12px 0", maxWidth: "80%", fontSize: "13px", whiteSpace: "pre-line"
+  },
+  chatInputContainer: { padding: "14px", borderTop: "1px solid #334155", backgroundColor: "#1e293b" },
+  chatInputRow: { display: "flex", gap: "8px" },
+  chatInput: {
+    flex: 1, padding: "10px 14px", borderRadius: "8px", border: "1px solid #475569",
+    backgroundColor: "#0f172a", color: "#f8fafc", fontSize: "13px", outline: "none"
+  },
+  chatButton: {
+    backgroundColor: "#06b6d4", color: "#0f172a", border: "none", padding: "0 14px",
+    borderRadius: "8px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center"
+  }
+};
