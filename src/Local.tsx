@@ -105,6 +105,7 @@ export default function LocalPage() {
       alert("Pedido finalizado con éxito.");
       cargarPedidosActivos(); // Recargar la lista para que desaparezca de pantalla
     }
+    // agregar logica de informe 
   };
 
   // ESTILOS

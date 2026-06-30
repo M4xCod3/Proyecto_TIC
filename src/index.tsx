@@ -14,7 +14,7 @@ export default function Index() {
     <>
       <div className="hero">
         <div className="navbar">
-          <div className="logo">⚡ PROYECTO TIC</div>
+          <div className="logo">⚡ Log_Cold</div>
           <div className="menu">
             <a href="#inicio">Inicio</a>
             <a href="#about">Proyecto</a>
